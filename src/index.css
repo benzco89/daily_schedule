@@ -1,0 +1,660 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* RTL Support */
+body {
+  direction: rtl;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* Calendar Styles */
+.rbc-calendar {
+  direction: rtl;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background-color: white;
+  padding: 1rem;
+}
+
+.rbc-toolbar {
+  margin-bottom: 1.5rem;
+  padding: 0 0.5rem;
+}
+
+.rbc-toolbar button {
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: #3B82F6;
+  border-color: #3B82F6;
+}
+
+.rbc-toolbar-label {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.rbc-header {
+  text-align: right;
+  padding: 0.75rem 0.5rem;
+  font-weight: 600;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.rbc-month-view {
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.rbc-month-row {
+  border-color: #e5e7eb;
+}
+
+.rbc-day-bg {
+  transition: background-color 0.2s ease;
+}
+
+.rbc-day-bg:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.rbc-today {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.rbc-rtl .rbc-btn-group {
+  direction: ltr;
+}
+
+.rbc-event {
+  padding: 4px 6px !important;
+  font-size: 0.85rem;
+  position: relative;
+  z-index: 4;
+  display: block !important;
+  margin: 2px 0 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.rbc-event-content {
+  font-weight: 500;
+  text-align: right;
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background-color: white;
+  }
+  
+  header, 
+  button:not(.rbc-button-link),
+  .print:hidden {
+    display: none !important;
+  }
+  
+  .rbc-calendar {
+    height: 100vh !important;
+  }
+}
+
+/* Weekly Report Print Styles */
+@media print {
+  body {
+    background-color: white;
+  }
+  
+  .fixed {
+    position: static !important;
+  }
+  
+  .inset-0 {
+    position: static !important;
+  }
+  
+  .bg-white {
+    background-color: white !important;
+  }
+  
+  .p-8 {
+    padding: 2rem !important;
+  }
+  
+  button {
+    display: none !important;
+  }
+  
+  .border-b {
+    border-bottom-width: 1px !important;
+    border-bottom-style: solid !important;
+    border-bottom-color: #e5e7eb !important;
+  }
+  
+  .space-y-6 > * + * {
+    margin-top: 1.5rem !important;
+  }
+  
+  .space-y-2 > * + * {
+    margin-top: 0.5rem !important;
+  }
+  
+  .bg-gray-50 {
+    background-color: #f9fafb !important;
+  }
+  
+  .text-3xl {
+    font-size: 1.875rem !important;
+    line-height: 2.25rem !important;
+  }
+  
+  .text-xl {
+    font-size: 1.25rem !important;
+    line-height: 1.75rem !important;
+  }
+  
+  .text-sm {
+    font-size: 0.875rem !important;
+    line-height: 1.25rem !important;
+  }
+  
+  .text-gray-600 {
+    color: #4b5563 !important;
+  }
+  
+  .text-gray-500 {
+    color: #6b7280 !important;
+  }
+  
+  .font-bold {
+    font-weight: 700 !important;
+  }
+  
+  .font-semibold {
+    font-weight: 600 !important;
+  }
+  
+  .font-medium {
+    font-weight: 500 !important;
+  }
+  
+  .rounded-lg {
+    border-radius: 0.5rem !important;
+  }
+  
+  .border-r-4 {
+    border-right-width: 4px !important;
+  }
+  
+  .p-3 {
+    padding: 0.75rem !important;
+  }
+  
+  .mt-1 {
+    margin-top: 0.25rem !important;
+  }
+  
+  .mb-8 {
+    margin-bottom: 2rem !important;
+  }
+  
+  .mb-3 {
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .pb-4 {
+    padding-bottom: 1rem !important;
+  }
+  
+  @page {
+    size: A4;
+    margin: 2cm;
+  }
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Custom styles for react-big-calendar */
+.rbc-date-cell {
+  text-align: center;
+}
+
+/* Hide the default date number since we're using our own */
+.rbc-date-cell > a {
+  display: none !important;
+}
+
+.rbc-date-cell.rbc-now > a {
+  background-color: #3B82F6;
+  color: white;
+  font-weight: bold;
+}
+
+/* Hide random numbers at the beginning of each week */
+.rbc-row-content .rbc-row:first-child .rbc-date-cell:last-child {
+  position: relative;
+}
+
+.rbc-row-content .rbc-row:first-child .rbc-date-cell:last-child::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: white;
+  z-index: 1;
+}
+
+.rbc-row-content .rbc-row:first-child .rbc-date-cell:last-child > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Custom styling for date cells */
+.rbc-custom-date-cell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+  padding: 2px;
+}
+
+/* Style for the day number */
+.rbc-custom-date-cell span {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin: 2px auto;
+}
+
+/* Highlight today's date */
+.rbc-today .rbc-custom-date-cell span {
+  background-color: #3174ad;
+  color: white;
+  font-weight: bold;
+}
+
+/* Container for events */
+.rbc-custom-date-cell .rbc-events-container {
+  flex-grow: 1;
+  width: 100%;
+  overflow: visible;
+  position: relative;
+  z-index: 3;
+  display: block !important;
+}
+
+/* Hide the random numbers that appear at the end of rows */
+.rbc-row-content .rbc-row > div:last-child {
+  position: relative;
+}
+
+.rbc-row-content .rbc-row > div:last-child::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  z-index: 0;
+}
+
+.rbc-row-content .rbc-row > div:last-child .rbc-custom-date-cell {
+  position: relative;
+  z-index: 1;
+}
+
+/* Right align event text */
+.rbc-event-content {
+  text-align: right;
+}
+
+/* Fix for the row content to ensure events are visible */
+.rbc-row-content {
+  position: relative;
+  z-index: 4;
+}
+
+/* Styling for the upcoming events list */
+.upcoming-events {
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background-color: white;
+  margin-bottom: 1.5rem;
+}
+
+.upcoming-events-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.event-card {
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  margin-bottom: 1rem;
+  border-right: 4px solid;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.event-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.event-card .event-title {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.event-card .event-time {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.event-card .event-status {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-left: 0.5rem;
+}
+
+/* Mobile responsiveness for calendar */
+@media (max-width: 768px) {
+  .rbc-calendar {
+    display: none !important; /* Hide calendar completely on mobile */
+  }
+  
+  .rbc-toolbar {
+    display: none !important; /* Hide calendar toolbar on mobile */
+  }
+  
+  /* Mobile styles for event cards */
+  .event-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+  }
+  
+  .event-card .event-title {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .event-card .event-time {
+    font-size: 0.8rem;
+    color: #666;
+  }
+  
+  .event-card .event-status {
+    align-self: flex-end;
+    margin-top: 0.5rem;
+  }
+  
+  .upcoming-events {
+    padding: 0.75rem;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  
+  .upcoming-events-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  /* Improve scrolling on mobile */
+  .h-[calc(100vh-12rem)] {
+    height: calc(100vh - 8rem) !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Improve display of multiple events in month view */
+.rbc-month-view .rbc-row-content {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.rbc-month-view .rbc-row-segment {
+  padding: 0 1px;
+}
+
+.rbc-custom-date-cell .rbc-events-container {
+  flex-grow: 1;
+  width: 100%;
+  overflow: visible;
+  position: relative;
+  z-index: 3;
+  display: block !important;
+  max-height: none !important;
+}
+
+/* Make events more compact in month view to show more events */
+.rbc-month-view .rbc-event {
+  padding: 1px 4px !important;
+  font-size: 0.7rem !important;
+  margin: 1px 0 !important;
+  min-height: 14px !important;
+  max-height: 14px !important;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 1 !important;
+}
+
+/* Increase row height in month view to fit more events */
+.rbc-month-row {
+  min-height: 120px !important;
+  overflow: visible !important;
+}
+
+/* Fix day view to show full day */
+.rbc-time-view {
+  min-height: 600px !important;
+}
+
+.rbc-time-view .rbc-time-content {
+  height: auto !important;
+  min-height: 600px !important;
+  overflow-y: auto !important;
+}
+
+.rbc-time-view .rbc-time-header {
+  height: auto !important;
+}
+
+.rbc-time-view .rbc-time-gutter {
+  font-size: 0.8rem;
+}
+
+/* Show all hours in day view */
+.rbc-time-view .rbc-day-slot {
+  min-height: 1440px !important; /* 24 hours * 60 minutes */
+}
+
+/* Make sure all time slots are visible */
+.rbc-time-content > .rbc-time-gutter {
+  flex: none !important;
+}
+
+.rbc-timeslot-group {
+  min-height: 60px !important; /* Each hour is 60px tall */
+}
+
+/* Fix for time indicators to show all 24 hours */
+.rbc-time-header-content {
+  min-height: 50px;
+}
+
+.rbc-time-header-gutter {
+  width: 70px !important;
+}
+
+/* Ensure time labels are visible */
+.rbc-label {
+  padding: 5px 5px !important;
+  font-size: 0.8rem !important;
+}
+
+/* Fix for the current time indicator */
+.rbc-current-time-indicator {
+  z-index: 3;
+  height: 2px;
+  background-color: #3174ad;
+  opacity: 0.7;
+  width: 100%;
+  pointer-events: none;
+}
+
+/* Improve popup styling for multiple events */
+.rbc-overlay {
+  position: absolute;
+  z-index: 10;
+  border: 1px solid #e5e7eb;
+  background-color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  padding: 0.5rem;
+  max-width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.rbc-overlay-header {
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0.5rem;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0.5rem;
+}
+
+.rbc-agenda-view table.rbc-agenda-table {
+  width: 100%;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+.rbc-agenda-view table.rbc-agenda-table thead > tr > th {
+  padding: 0.5rem;
+  text-align: right;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+}
+
+.rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
+  padding: 0.5rem;
+  text-align: right;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rbc-agenda-view table.rbc-agenda-table tbody > tr:last-child > td {
+  border-bottom: 0;
+}
+
+.rbc-agenda-time-cell {
+  width: 100px;
+}
+
+.rbc-agenda-date-cell,
+.rbc-agenda-time-cell,
+.rbc-agenda-event-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ensure "more" link is visible and clickable */
+.rbc-row-segment .rbc-show-more {
+  background-color: transparent;
+  color: #3B82F6;
+  font-weight: 500;
+  padding: 0 2px;
+  text-align: right;
+  width: 100%;
+  display: block;
+  font-size: 0.7rem;
+  z-index: 5;
+  position: relative;
+}
+
+@media print {
+  /* Hide everything except the report */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Show only the report */
+  .weekly-report,
+  .weekly-report * {
+    visibility: visible !important;
+  }
+  
+  /* Reset position for printing */
+  .weekly-report {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    background: white !important;
+    padding: 2cm !important;
+  }
+  
+  /* Hide print and close buttons */
+  .print-hidden {
+    display: none !important;
+  }
+  
+  /* Adjust spacing for print */
+  .weekly-report h1 {
+    margin-bottom: 1cm !important;
+  }
+  
+  .weekly-report h2 {
+    margin-top: 0.5cm !important;
+    margin-bottom: 0.3cm !important;
+  }
+  
+  /* Ensure page breaks don't cut events */
+  .weekly-report .event-card {
+    break-inside: avoid !important;
+  }
+  
+  /* Set paper size and margins */
+  @page {
+    size: A4;
+    margin: 2cm;
+  }
+}
