@@ -115,6 +115,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onEventSelect, onAddEvent }
   } = useEventStore();
   const [combinedEvents, setCombinedEvents] = useState<CalendarEvent[]>([]);
   const [showWeeklyReport, setShowWeeklyReport] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   useEffect(() => {
     // Combine user events with Israeli holidays and sort by priority
@@ -123,6 +124,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onEventSelect, onAddEvent }
     setCombinedEvents(sortEventsByPriority(allEvents));
   }, [calendarEvents, selectedDate]);
   
+  // Check if device is mobile
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
   // Custom event styling
   const eventStyleGetter = (event: CalendarEvent) => {
     // Always make continuous events red regardless of their set color
@@ -246,6 +258,51 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onEventSelect, onAddEvent }
     );
   };
   
+  // Custom event component for mobile
+  const MobileEvent = ({ event }: { event: CalendarEvent }) => {
+    return (
+      <div 
+        className="h-2 w-2 rounded-full mb-1"
+        style={{ 
+          backgroundColor: event.event_type === 'continuous' ? '#EF4444' : event.color,
+          opacity: event.status === 'archived' ? 0.6 : 1
+        }}
+      />
+    );
+  };
+
+  // Custom date cell for mobile
+  const MobileDateCell = ({ value, children }: { value: Date, children: React.ReactNode }) => {
+    const dayEvents = combinedEvents.filter(event => {
+      const eventStart = moment(event.start);
+      const eventEnd = moment(event.end);
+      return moment(value).isBetween(eventStart, eventEnd, 'day', '[]');
+    });
+    
+    return (
+      <div className="rbc-mobile-date-cell">
+        <span className="text-sm">{moment(value).format('D')}</span>
+        {dayEvents.length > 0 && (
+          <div className="flex flex-wrap justify-center mt-1 gap-1">
+            {dayEvents.slice(0, 3).map(event => (
+              <div 
+                key={event.id}
+                className="h-2 w-2 rounded-full"
+                style={{ 
+                  backgroundColor: event.event_type === 'continuous' ? '#EF4444' : event.color,
+                  opacity: event.status === 'archived' ? 0.6 : 1
+                }}
+              />
+            ))}
+            {dayEvents.length > 3 && (
+              <span className="text-xs text-gray-500">+{dayEvents.length - 3}</span>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+  
   return (
     <>
       <div className="h-full flex flex-col">
@@ -318,9 +375,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onEventSelect, onAddEvent }
             startAccessor="start"
             endAccessor="end"
             style={{ height: currentView === 'month' ? '100%' : '600px' }}
-            views={['month', 'week', 'day']}
-            view={currentView}
-            date={selectedDate}
+            views={isMobile ? ['month'] : ['month', 'week', 'day']}
+            view={isMobile ? 'month' : currentView}
             onView={handleViewChange}
             onNavigate={handleNavigate}
             onSelectEvent={handleSelectEvent}
@@ -333,9 +389,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onEventSelect, onAddEvent }
             components={{
               ...components,
               toolbar: CustomToolbar,
+              event: isMobile ? MobileEvent : CustomEvent,
+              dateCell: isMobile ? MobileDateCell : CustomDateCell
             }}
             popup={true}
-            showMultiDayTimes={true}
+            showMultiDayTimes={!isMobile}
             min={new Date(1972, 0, 1, 0, 0, 0)}
             max={new Date(1972, 0, 1, 23, 59, 59)}
             messages={{
@@ -507,6 +565,49 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onEventSelect, onAddEvent }
         /* Make continuous events stand out more */
         .rbc-event[style*="background-color: rgb(239, 68, 68)"] {
           border-left: 3px solid #d32f2f !important;
+        }
+        
+        /* Mobile calendar styles */
+        @media (max-width: 768px) {
+          .rbc-calendar {
+            font-size: 14px;
+          }
+          
+          .rbc-month-view {
+            border: none;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          }
+          
+          .rbc-header {
+            padding: 8px 0;
+            font-size: 12px;
+          }
+          
+          .rbc-mobile-date-cell {
+            min-height: 60px;
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          }
+          
+          .rbc-event {
+            margin: 0;
+          }
+          
+          .rbc-row-segment {
+            padding: 1px;
+          }
+          
+          .rbc-show-more {
+            font-size: 12px;
+            padding: 2px;
+            text-align: center;
+            background: none;
+            color: #666;
+          }
         }
       `}</style>
     </>

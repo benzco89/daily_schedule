@@ -38,11 +38,6 @@ function App() {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      
-      // Force list view on mobile
-      if (mobile) {
-        setView('list');
-      }
     };
     
     window.addEventListener('resize', handleResize);
@@ -161,28 +156,27 @@ function App() {
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-gray-900">מערכת ניהול אירועים</h1>
             <div className="flex items-center space-x-4 space-x-reverse">
-              {!isMobile && (
-                <div className="flex bg-gray-200 rounded-md p-1">
-                  <button
-                    onClick={() => setView('calendar')}
-                    className={`flex items-center px-3 py-1.5 rounded ${
-                      view === 'calendar' ? 'bg-white shadow-sm' : 'text-gray-700'
-                    }`}
-                  >
-                    <CalendarIcon size={18} className="ml-1" />
-                    לוח שנה
-                  </button>
-                  <button
-                    onClick={() => setView('list')}
-                    className={`flex items-center px-3 py-1.5 rounded ${
-                      view === 'list' ? 'bg-white shadow-sm' : 'text-gray-700'
-                    }`}
-                  >
-                    <List size={18} className="ml-1" />
-                    רשימה
-                  </button>
-                </div>
-              )}
+              {/* Show view toggle buttons for both mobile and desktop */}
+              <div className={`flex bg-gray-200 rounded-md p-1 ${isMobile ? 'text-sm' : ''}`}>
+                <button
+                  onClick={() => setView('calendar')}
+                  className={`flex items-center px-3 py-1.5 rounded ${
+                    view === 'calendar' ? 'bg-white shadow-sm' : 'text-gray-700'
+                  }`}
+                >
+                  <CalendarIcon size={isMobile ? 16 : 18} className="ml-1" />
+                  {!isMobile && 'לוח שנה'}
+                </button>
+                <button
+                  onClick={() => setView('list')}
+                  className={`flex items-center px-3 py-1.5 rounded ${
+                    view === 'list' ? 'bg-white shadow-sm' : 'text-gray-700'
+                  }`}
+                >
+                  <List size={isMobile ? 16 : 18} className="ml-1" />
+                  {!isMobile && 'רשימה'}
+                </button>
+              </div>
               <button
                 onClick={() => {
                   setShowEventForm(true);
@@ -192,8 +186,8 @@ function App() {
                 }}
                 className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
-                <Plus size={18} className="ml-1" />
-                אירוע חדש
+                <Plus size={isMobile ? 16 : 18} className="ml-1" />
+                {!isMobile && 'אירוע חדש'}
               </button>
             </div>
           </div>
@@ -208,7 +202,7 @@ function App() {
           </div>
         ) : (
           <div className="bg-white shadow-sm rounded-lg p-6 h-[calc(100vh-12rem)]">
-            {isMobile || view === 'list' ? (
+            {view === 'list' ? (
               <ListView 
                 onEventSelect={handleEventSelect}
               />
