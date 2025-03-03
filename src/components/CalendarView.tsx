@@ -281,18 +281,22 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onEventSelect, onAddEvent }
     
     return (
       <div className="rbc-mobile-date-cell">
-        <span className="text-sm">{moment(value).format('D')}</span>
+        <span className="text-sm font-medium">{moment(value).format('D')}</span>
         {dayEvents.length > 0 && (
-          <div className="flex flex-wrap justify-center mt-1 gap-1">
+          <div className="flex flex-col items-center mt-1 gap-1">
             {dayEvents.slice(0, 3).map(event => (
               <div 
                 key={event.id}
-                className="h-2 w-2 rounded-full"
+                className="w-full px-1 py-0.5 text-xs rounded text-center truncate"
                 style={{ 
-                  backgroundColor: event.event_type === 'continuous' ? '#EF4444' : event.color,
+                  backgroundColor: event.event_type === 'continuous' ? '#FEE2E2' : `${event.color}20`,
+                  color: event.event_type === 'continuous' ? '#EF4444' : event.color,
+                  borderRight: `2px solid ${event.event_type === 'continuous' ? '#EF4444' : event.color}`,
                   opacity: event.status === 'archived' ? 0.6 : 1
                 }}
-              />
+              >
+                {event.title}
+              </div>
             ))}
             {dayEvents.length > 3 && (
               <span className="text-xs text-gray-500">+{dayEvents.length - 3}</span>
@@ -583,30 +587,70 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onEventSelect, onAddEvent }
           .rbc-header {
             padding: 8px 0;
             font-size: 12px;
+            font-weight: 600;
+            background-color: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
           }
           
           .rbc-mobile-date-cell {
-            min-height: 60px;
+            min-height: 80px;
             padding: 4px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-          }
-          
-          .rbc-event {
-            margin: 0;
+            align-items: stretch;
+            border-bottom: 1px solid #f1f5f9;
           }
           
           .rbc-row-segment {
-            padding: 1px;
+            padding: 0;
           }
           
           .rbc-show-more {
-            font-size: 12px;
+            font-size: 11px;
             padding: 2px;
             text-align: center;
             background: none;
-            color: #666;
+            color: #64748b;
+          }
+
+          .rbc-month-row {
+            min-height: 100px;
+          }
+
+          .rbc-date-cell {
+            text-align: center;
+            padding: 4px;
+          }
+
+          .rbc-off-range-bg {
+            background-color: #f8fafc;
+          }
+
+          .rbc-today {
+            background-color: #eff6ff;
+          }
+
+          .rbc-toolbar {
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 8px;
+          }
+
+          .rbc-toolbar-label {
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            text-align: center;
+            order: -1;
+          }
+
+          .rbc-btn-group {
+            margin: 0;
+          }
+
+          .rbc-btn-group button {
+            padding: 6px 12px;
+            font-size: 12px;
           }
         }
       `}</style>
