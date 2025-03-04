@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, List, Plus, Loader2 } from 'lucide-react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useMediaQuery } from './hooks/useMediaQuery';
 
 import { useEventStore } from './store/eventStore';
 import { Event, CalendarEvent } from './types/event';
@@ -23,31 +24,11 @@ function App() {
     archivePastEvents
   } = useEventStore();
   
-  // Check if device is mobile
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  
-  // Set default view based on device (list for mobile, calendar for desktop)
-  const [view, setView] = useState<'calendar' | 'list'>(isMobile ? 'list' : 'calendar');
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const [showEventForm, setShowEventForm] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [newEventDate, setNewEventDate] = useState<{ start: Date, end: Date } | null>(null);
-  
-  // Update isMobile state when window is resized
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      
-      // Force list view on mobile
-      if (mobile) {
-        setView('list');
-      }
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
   
   useEffect(() => {
     fetchEvents();
@@ -155,47 +136,18 @@ function App() {
   };
   
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col" dir="rtl">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">מערכת ניהול אירועים</h1>
-            <div className="flex items-center space-x-4 space-x-reverse">
-              {!isMobile && (
-                <div className="flex bg-gray-200 rounded-md p-1">
-                  <button
-                    onClick={() => setView('calendar')}
-                    className={`flex items-center px-3 py-1.5 rounded ${
-                      view === 'calendar' ? 'bg-white shadow-sm' : 'text-gray-700'
-                    }`}
-                  >
-                    <CalendarIcon size={18} className="ml-1" />
-                    לוח שנה
-                  </button>
-                  <button
-                    onClick={() => setView('list')}
-                    className={`flex items-center px-3 py-1.5 rounded ${
-                      view === 'list' ? 'bg-white shadow-sm' : 'text-gray-700'
-                    }`}
-                  >
-                    <List size={18} className="ml-1" />
-                    רשימה
-                  </button>
-                </div>
-              )}
-              <button
-                onClick={() => {
-                  setShowEventForm(true);
-                  setIsEditing(false);
-                  setSelectedEvent(null);
-                  setNewEventDate(null);
-                }}
-                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                <Plus size={18} className="ml-1" />
-                אירוע חדש
-              </button>
-            </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <h1 className="text-xl font-bold text-gray-900">מערכת ניהול אירועים</h1>
+          <div className="flex items-center space-x-4 space-x-reverse">
+            <button
+              onClick={() => setShowEventForm(true)}
+              className={`${isMobile ? 'px-3 py-1.5 text-sm mr-8' : 'px-4 py-2'} bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center`}
+            >
+              <Plus size={isMobile ? 16 : 18} className="ml-1" />
+              אירוע חדש
+            </button>
           </div>
         </div>
       </header>
@@ -208,16 +160,11 @@ function App() {
           </div>
         ) : (
           <div className="bg-white shadow-sm rounded-lg p-6 h-[calc(100vh-12rem)]">
-            {isMobile || view === 'list' ? (
-              <ListView 
-                onEventSelect={handleEventSelect}
-              />
-            ) : (
-              <CalendarView 
-                onEventSelect={handleEventSelect}
-                onAddEvent={handleAddEvent}
-              />
-            )}
+            <CalendarView 
+              onEventSelect={handleEventSelect}
+              onAddEvent={handleAddEvent}
+              defaultView={isMobile ? "timeGridDay" : "timeGridWeek"}
+            />
           </div>
         )}
       </main>
@@ -252,9 +199,16 @@ function App() {
       )}
       
       <ToastContainer
-        position="bottom-left"
+        position="top-center"
         autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
         rtl={true}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
       />
     </div>
   );

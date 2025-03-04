@@ -7,57 +7,105 @@
 /* Event Styles */
 .fc-event {
   border-radius: 4px;
-  border: none;
-  padding: 4px 8px;
-  min-height: 60px;
-  font-size: 1rem;
+  border: none !important;
+  padding: 4px 8px !important;
+  min-height: 25px !important;
+  font-size: 0.875rem !important;
+  margin: 1px 0 !important;
+  cursor: pointer !important;
 }
 
 .fc-event-title {
-  font-weight: bold;
-  font-size: 1rem;
-  white-space: normal;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 500 !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block !important;
+  line-height: 1.2 !important;
+  color: white !important;
 }
 
 .fc-event-time {
-  font-size: 0.875rem;
-  margin-bottom: 4px;
+  font-size: 0.75rem !important;
+  margin-bottom: 2px !important;
+  color: white !important;
+  opacity: 0.9 !important;
+}
+
+/* Event Types */
+.fc-event.continuous-event {
+  background-color: #EF4444 !important;
+  border-color: #DC2626 !important;
+  color: white !important;
+}
+
+/* Default colors for events without custom colors */
+.fc-event.full-day-event:not([style*="background-color"]) {
+  background-color: #3B82F6 !important;
+  border-color: #2563EB !important;
+  color: white !important;
+}
+
+.fc-event.time-specific-event:not([style*="background-color"]) {
+  background-color: #10B981 !important;
+  border-color: #059669 !important;
+  color: white !important;
+}
+
+/* Ensure text is always white for readability */
+.fc-event.full-day-event,
+.fc-event.time-specific-event {
+  color: white !important;
+}
+.fc-event.full-day-event .fc-event-title,
+.fc-event.full-day-event .fc-event-time,
+.fc-event.time-specific-event .fc-event-title,
+.fc-event.time-specific-event .fc-event-time {
+  color: white !important;
+}
+
+/* Event Status */
+.fc-event.archived {
+  opacity: 0.6;
+}
+
+/* Month View Events */
+.fc-daygrid-event {
+  white-space: normal !important;
+  align-items: flex-start !important;
+  padding: 2px 4px !important;
+  margin: 1px 2px !important;
+}
+
+.fc-daygrid-event .fc-event-title {
+  font-size: 0.75rem !important;
+}
+
+.fc-daygrid-event .fc-event-time {
+  font-size: 0.7rem !important;
+}
+
+.fc-daygrid-more-link {
+  font-size: 0.75rem !important;
+  color: #3B82F6 !important;
+  font-weight: 500 !important;
+  padding: 2px !important;
 }
 
 /* Time Grid */
 .fc-timegrid-slot {
-  height: 60px !important;
+  height: 40px !important;
+  border-bottom: 1px solid #e5e7eb !important;
 }
 
-.fc-timegrid-slot-label {
-  font-size: 0.875rem;
-  color: #666;
+.fc-timegrid-slot-lane {
+  border-bottom: none !important;
 }
 
-.fc-timegrid-axis {
-  padding: 8px;
-}
-
-/* Mobile Styles */
-@media (max-width: 768px) {
-  .fc-event {
-    min-height: 40px;
-    padding: 2px 4px;
-  }
-  
-  .fc-event-title {
-    font-size: 0.875rem;
-  }
-  
-  .fc-event-time {
-    font-size: 0.75rem;
-  }
-  
-  .fc-timegrid-slot {
-    height: 40px !important;
-  }
+.fc-timegrid-event {
+  min-height: 25px !important;
+  margin: 1px 0 !important;
+  padding: 2px 4px !important;
 }
 
 /* Header Toolbar */
@@ -76,88 +124,225 @@
   background-color: rgba(59, 130, 246, 0.05) !important;
 }
 
-/* Grid Lines */
-.fc-timegrid-col-frame {
-  border-left: 1px solid #e5e7eb;
-}
-
+/* Now Indicator */
 .fc-timegrid-now-indicator-line {
   border-color: #ef4444;
+  z-index: 4;
 }
 
-/* List View */
-.fc-list-event {
-  padding: 8px;
-}
-
-.fc-list-event-title {
-  font-size: 1rem;
-}
-
-.fc-list-event-time {
-  font-size: 0.875rem;
-  color: #666;
-}
-
-/* Scrollbars */
-.fc-scroller {
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
-}
-
-.fc-scroller::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.fc-scroller::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.fc-scroller::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
-  border-radius: 3px;
-}
-
-/* Button Styles */
-.fc-button {
-  background-color: #f3f4f6 !important;
-  border: none !important;
-  color: #374151 !important;
-  padding: 0.5rem 1rem !important;
-  font-size: 0.875rem !important;
-  border-radius: 0.375rem !important;
-  transition: all 0.2s !important;
-}
-
-.fc-button:hover {
-  background-color: #e5e7eb !important;
-}
-
-.fc-button-active {
-  background-color: #3b82f6 !important;
-  color: white !important;
-}
-
-/* Time Slots */
-.fc-timegrid-slot-label-cushion {
-  font-size: 0.875rem;
-  color: #666;
-  padding: 4px;
-}
-
-/* Event Overlap */
-.fc-timegrid-event {
-  margin: 1px 0;
-}
-
-/* Now Indicator */
 .fc-timegrid-now-indicator-arrow {
   border-color: #ef4444;
   margin-left: -6px;
 }
 
-.fc-timegrid-now-indicator-line {
-  border-color: #ef4444;
-  z-index: 4;
+/* RTL Fixes */
+.fc-direction-rtl {
+  text-align: right;
+}
+
+.fc-direction-rtl .fc-toolbar,
+.fc-direction-rtl .fc-toolbar > * {
+  flex-direction: row-reverse;
+}
+
+.fc-direction-rtl .fc-toolbar-title {
+  margin: 0 0.5rem;
+}
+
+.fc-direction-rtl .fc-button-group {
+  flex-direction: row-reverse;
+}
+
+/* Fix for reversed button corners in RTL */
+.fc-direction-rtl .fc-prev-button {
+  border-radius: 0 4px 4px 0 !important;
+}
+
+.fc-direction-rtl .fc-next-button {
+  border-radius: 4px 0 0 4px !important;
+}
+
+.fc-direction-rtl .fc-timegrid-slot-label,
+.fc-direction-rtl .fc-list-table th,
+.fc-direction-rtl .fc-list-event td {
+  text-align: right;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .fc .fc-toolbar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .fc .fc-toolbar-title {
+    font-size: 1.2rem !important;
+  }
+  
+  .fc .fc-button {
+    padding: 0.3rem 0.6rem !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .fc-event {
+    font-size: 0.8rem !important;
+  }
+  
+  /* Ensure calendar fills available height */
+  .fc-view-harness {
+    min-height: calc(100vh - 14rem) !important;
+  }
+}
+
+/* Ensure calendar container fills available space */
+.calendar-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Make sure the calendar fills the available space */
+.calendar-container .fc {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-container .fc-view-harness {
+  flex-grow: 1;
+}
+
+/* Time Grid Container */
+.fc-timegrid-container {
+  height: auto !important;
+  min-height: 800px !important;
+}
+
+.fc-timegrid-body {
+  height: auto !important;
+  min-height: 800px !important;
+}
+
+/* Event Content */
+.fc-event-main {
+  padding: 4px 8px;
+}
+
+.fc-event-title-container {
+  margin-top: 4px;
+}
+
+/* Event Priority */
+.fc-event.high-priority {
+  border-width: 2px;
+  font-weight: bold;
+}
+
+.fc-event.medium-priority {
+  border-width: 1px;
+}
+
+.fc-event.low-priority {
+  border-style: dashed;
+}
+
+/* All-day Events */
+.fc-daygrid-event.full-day-event,
+.fc-daygrid-event.continuous-event {
+  margin: 2px 0 !important;
+  padding: 2px 4px !important;
+}
+
+.fc-timegrid-event.full-day-event,
+.fc-timegrid-event.continuous-event {
+  margin: 0 !important;
+  height: 24px !important;
+  line-height: 24px !important;
+}
+
+.fc-v-event.full-day-event,
+.fc-v-event.continuous-event {
+  border-right-width: 4px !important;
+}
+
+/* Event Content */
+.fc-event-main {
+  padding: 4px 8px;
+}
+
+.fc-event-title-container {
+  margin-top: 4px;
+}
+
+.fc-event-title,
+.fc-event-time {
+  color: white !important;
+  opacity: 1 !important;
+}
+
+/* Holiday Events */
+.holiday-event {
+  border-radius: 2px !important;
+  border-right-width: 3px !important;
+  background-color: rgba(245, 158, 11, 0.1) !important;
+  font-size: 0.75rem !important;
+  padding: 2px 4px !important;
+  margin: 1px 0 !important;
+  opacity: 0.9 !important;
+}
+
+.holiday-event .fc-event-title {
+  font-weight: 500 !important;
+  color: #333 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+}
+
+.fc-daygrid-event.holiday-event {
+  margin-top: 2px !important;
+  margin-bottom: 2px !important;
+  white-space: normal !important;
+  display: block !important;
+  min-height: 18px !important;
+  line-height: 1.2 !important;
+  z-index: 5 !important;
+}
+
+/* Make holiday text visible in month view */
+.fc-daygrid-day-events .holiday-event .fc-event-title {
+  display: block !important;
+  font-size: 0.7rem !important;
+  line-height: 1.2 !important;
+  padding: 1px 0 !important;
+}
+
+/* Ensure holiday titles are always visible in month view */
+.fc-daygrid-day-events .holiday-event .holiday-title {
+  display: block !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  color: #333 !important;
+  line-height: 1.2 !important;
+  padding: 1px 0 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* Holiday container in month view */
+.holiday-container {
+  padding: 2px !important;
+  margin: 1px 0 !important;
+}
+
+/* Increase contrast for holiday events in month view */
+.fc-daygrid-month .holiday-event {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  border-right-color: #f59e0b !important;
+  border-right-width: 4px !important;
+  margin: 2px 0 !important;
+}
+
+.fc-timegrid-event.holiday-event {
+  min-height: 20px !important;
 } 

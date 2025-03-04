@@ -233,15 +233,36 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
                     </div>
                   </label>
                   <input
-                    type="time"
+                    type="text"
+                    maxLength={5}
+                    placeholder="--:--"
                     {...register('start_time', { 
-                      required: eventType === 'time_specific' ? 'שעת התחלה היא שדה חובה' : false 
+                      required: eventType === 'time_specific' ? 'שעת התחלה היא שדה חובה' : false,
+                      pattern: {
+                        value: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+                        message: 'פורמט שעה לא תקין'
+                      },
+                      validate: {
+                        validTime: (value) => {
+                          if (!value) return true;
+                          const [hours, minutes] = value.split(':').map(Number);
+                          return (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) || 'שעה לא תקינה';
+                        }
+                      },
+                      onChange: (e) => {
+                        let value = e.target.value.replace(/[^\d:]/g, '');
+                        if (value.length === 2 && !value.includes(':')) {
+                          value += ':';
+                        }
+                        e.target.value = value;
+                      }
                     })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                   />
                   {errors.start_time && (
                     <p className="mt-1 text-sm text-red-600">{errors.start_time.message}</p>
                   )}
+                  <p className="mt-1 text-xs text-gray-500">הזן שעה בפורמט 24 שעות (לדוגמה: 09:00)</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -251,11 +272,43 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
                     </div>
                   </label>
                   <input
-                    type="time"
-                    {...register('end_time')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    type="text"
+                    maxLength={5}
+                    placeholder="--:--"
+                    {...register('end_time', {
+                      pattern: {
+                        value: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+                        message: 'פורמט שעה לא תקין'
+                      },
+                      validate: {
+                        validTime: (value) => {
+                          if (!value) return true;
+                          const [hours, minutes] = value.split(':').map(Number);
+                          return (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) || 'שעה לא תקינה';
+                        },
+                        afterStart: (value, formValues) => {
+                          if (!value || !formValues.start_time) return true;
+                          const [startHours, startMinutes] = formValues.start_time.split(':').map(Number);
+                          const [endHours, endMinutes] = value.split(':').map(Number);
+                          const startTotal = startHours * 60 + startMinutes;
+                          const endTotal = endHours * 60 + endMinutes;
+                          return endTotal > startTotal || 'שעת הסיום חייבת להיות אחרי שעת ההתחלה';
+                        }
+                      },
+                      onChange: (e) => {
+                        let value = e.target.value.replace(/[^\d:]/g, '');
+                        if (value.length === 2 && !value.includes(':')) {
+                          value += ':';
+                        }
+                        e.target.value = value;
+                      }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                   />
-                  <p className="mt-1 text-xs text-gray-500">אם לא תוזן שעת סיום, האירוע יוגדר לשעה אחת</p>
+                  {errors.end_time && (
+                    <p className="mt-1 text-sm text-red-600">{errors.end_time.message}</p>
+                  )}
+                  <p className="mt-1 text-xs text-gray-500">הזן שעה בפורמט 24 שעות (לדוגמה: 17:00)</p>
                 </div>
               </>
             )}
