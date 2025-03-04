@@ -111,7 +111,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
     <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full mx-auto max-h-[90vh] overflow-y-auto" dir="rtl">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">
-          {event?.id ? 'עריכת אירוע' : 'אירוע חדש'}
+          {event?.id ? 'עריכת אירוע' : 'יצירת אירוע חדש'}
         </h2>
         <button 
           onClick={onCancel}

@@ -345,4 +345,73 @@
 
 .fc-timegrid-event.holiday-event {
   min-height: 20px !important;
+}
+
+/* List View Styles */
+.list-view-container {
+  min-height: calc(100vh - 12rem);
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Mobile Event Popup Styles */
+.event-popup {
+  position: absolute;
+  z-index: 1000;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  max-width: 300px;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.event-popup-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  background-color: transparent;
+}
+
+/* Make sure the calendar container fills the available height */
+.calendar-container {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 4rem);
+}
+
+/* Ensure the calendar view fills the available height */
+.fc-view-harness {
+  min-height: calc(100vh - 14rem) !important;
+}
+
+/* Ensure the list view fills the available height */
+.list-view-wrapper {
+  min-height: calc(100vh - 12rem);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make sure the list content fills the available space */
+.list-view-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Ensure the white background extends to the bottom of the page */
+.list-view-background {
+  background-color: white;
+  min-height: calc(100vh - 12rem);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  padding: 1rem;
 } 

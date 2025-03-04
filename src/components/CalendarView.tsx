@@ -7,7 +7,7 @@ import { useEventStore } from '../store/eventStore';
 import { CalendarEvent } from '../types/event';
 import ListView from './ListView';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import { Menu, FileText } from 'lucide-react';
+import { Menu, FileText, X, Calendar, Clock, Bookmark, Archive, Trash, Edit } from 'lucide-react';
 import '../styles/calendar.css';
 import moment from 'moment';
 import { toast } from 'react-toastify';
@@ -15,6 +15,7 @@ import EventModal from './EventModal';
 import WeeklyReport from './WeeklyReport';
 import EventForm from './EventForm';
 import { getAllHolidays } from '../utils/israeliHolidays';
+import { formatDate } from '../utils/dateUtils';
 
 interface CalendarViewProps {
   onEventSelect?: (event: CalendarEvent) => void;
@@ -69,17 +70,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { 
     calendarEvents, 
-    selectedDate, 
-    setSelectedDate, 
-    addEvent,
+    fetchEvents, 
+    deleteEvent: deleteEventFromStore, 
+    updateEvent: updateEventFromStore,
+    selectedDate,
+    setSelectedDate,
     showContinuousEvents,
-    showArchivedEvents,
     toggleContinuousEvents,
+    showArchivedEvents,
     toggleArchivedEvents,
-    fetchEvents,
-    updateEvent,
-    deleteEvent,
-    archiveEvent
+    showHolidays,
+    setShowHolidays
   } = useEventStore();
   const calendarRef = useRef<any>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -87,8 +88,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const [showWeeklyReport, setShowWeeklyReport] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showEventForm, setShowEventForm] = useState(false);
-  const [showHolidays, setShowHolidays] = useState(true);
   const israeliHolidays = getAllHolidays();
+  const [showEventPopup, setShowEventPopup] = useState(false);
+  const [eventPopupPosition, setEventPopupPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -122,8 +129,28 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       ...info.event.extendedProps,
       color: info.event.backgroundColor
     };
+    
+    // Skip handling for holiday events
+    if (event.extendedProps?.type === 'holiday') {
+      return;
+    }
+    
     setSelectedEvent(event);
-    setShowEventModal(true);
+    
+    // Get the position of the clicked event
+    const rect = info.el.getBoundingClientRect();
+    
+    // Set the position for the popup
+    const popupPosition = {
+      top: rect.top + window.scrollY,
+      left: rect.left + window.scrollX,
+      width: rect.width,
+      height: rect.height
+    };
+    
+    // Store the position in state
+    setEventPopupPosition(popupPosition);
+    setShowEventPopup(true);
   };
 
   const handleDateSelect = async (selectInfo: any) => {
@@ -202,6 +229,204 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     return calendarEvents;
   }, [calendarEvents, israeliHolidays, showHolidays]);
   
+  const handleArchiveEvent = async () => {
+    if (selectedEvent) {
+      try {
+        await updateEventFromStore({ id: selectedEvent.id, status: 'archived' });
+        toast.success('האירוע הועבר לארכיון בהצלחה');
+        setShowEventPopup(false);
+        await fetchEvents();
+      } catch (error) {
+        console.error('Error archiving event:', error);
+        toast.error('שגיאה בהעברת האירוע לארכיון');
+      }
+    }
+  };
+  
+  const handleDeleteEvent = async () => {
+    if (selectedEvent && window.confirm('האם אתה בטוח שברצונך למחוק את האירוע?')) {
+      try {
+        await deleteEventFromStore(selectedEvent.id);
+        toast.success('האירוע נמחק בהצלחה');
+        setShowEventPopup(false);
+        await fetchEvents();
+      } catch (error) {
+        console.error('Error deleting event:', error);
+        toast.error('שגיאה במחיקת האירוע');
+      }
+    }
+  };
+  
+  const refetchEvents = async () => {
+    try {
+      await fetchEvents();
+    } catch (error) {
+      console.error('Error refetching events:', error);
+      toast.error('שגיאה בטעינת האירועים');
+    }
+  };
+  
+  const EventPopup = () => {
+    if (!selectedEvent || !showEventPopup || !eventPopupPosition) return null;
+    
+    // Calculate optimal position for the popup
+    const windowHeight = window.innerHeight;
+    const windowWidth = window.innerWidth;
+    
+    // Determine if popup should appear above or below the event
+    const spaceBelow = windowHeight - (eventPopupPosition.top + eventPopupPosition.height);
+    const spaceAbove = eventPopupPosition.top;
+    const showBelow = spaceBelow >= 250 || spaceBelow > spaceAbove;
+    
+    // Position the popup
+    const popupStyle: React.CSSProperties = {
+      position: 'absolute',
+      zIndex: 1000,
+      width: Math.min(350, windowWidth - 40),
+      maxHeight: '350px',
+      backgroundColor: 'white',
+      borderRadius: '8px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      border: `2px solid ${selectedEvent.color || '#3B82F6'}`,
+      padding: '16px',
+      overflow: 'auto'
+    };
+    
+    // Position above or below the event
+    if (showBelow) {
+      popupStyle.top = `${eventPopupPosition.top + eventPopupPosition.height + 8}px`;
+    } else {
+      popupStyle.bottom = `${windowHeight - eventPopupPosition.top + 8}px`;
+    }
+    
+    // Center horizontally relative to the event
+    const eventCenter = eventPopupPosition.left + (eventPopupPosition.width / 2);
+    const popupWidth = Math.min(350, windowWidth - 40);
+    popupStyle.left = `${Math.max(20, Math.min(windowWidth - popupWidth - 20, eventCenter - (popupWidth / 2)))}px`;
+    
+    // Determine badge color - continuous events are always red
+    const badgeColor = selectedEvent.event_type === 'continuous' ? '#EF4444' : selectedEvent.color;
+    const badgeTextColor = ['#FFFFFF', '#FFFF00'].includes(badgeColor) ? '#000000' : '#FFFFFF';
+    
+    return (
+      <>
+        <div 
+          className="event-popup"
+          style={popupStyle}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-start mb-3">
+            <h3 className="text-lg font-semibold">{selectedEvent.title}</h3>
+            <button 
+              onClick={() => setShowEventPopup(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          
+          {/* Event Type Badge */}
+          <div className="flex items-center mb-3">
+            <span 
+              className="px-2 py-1 rounded-full text-xs font-medium"
+              style={{ 
+                backgroundColor: badgeColor,
+                color: badgeTextColor
+              }}
+            >
+              {selectedEvent.event_type === 'continuous' && 'מתמשך'}
+              {selectedEvent.event_type === 'full_day' && 'יום מלא'}
+              {selectedEvent.event_type === 'time_specific' && 'שעה מוגדרת'}
+            </span>
+            
+            {selectedEvent.status === 'archived' && (
+              <span className="mr-2 px-2 py-1 bg-gray-200 rounded-full text-xs font-medium text-gray-700">
+                בארכיון
+              </span>
+            )}
+          </div>
+          
+          {/* Date and Time */}
+          <div className="flex items-start mb-3">
+            <Calendar size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
+            <div>
+              <p className="text-sm text-gray-700">
+                {formatDate(selectedEvent.start_date)}
+                {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.start_date && ` - ${formatDate(selectedEvent.end_date)}`}
+              </p>
+              {selectedEvent.event_type === 'time_specific' && selectedEvent.start_time && (
+                <div className="flex items-center mt-1">
+                  <Clock size={14} className="text-gray-500 ml-1 shrink-0" />
+                  <p className="text-sm text-gray-700">
+                    {selectedEvent.start_time}
+                    {selectedEvent.end_time && ` - ${selectedEvent.end_time}`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Details */}
+          {selectedEvent.details && (
+            <div className="flex items-start mb-3">
+              <FileText size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
+              <div>
+                <h3 className="text-xs font-medium text-gray-700">פרטים</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-line">{selectedEvent.details}</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Notes */}
+          {selectedEvent.notes && (
+            <div className="flex items-start mb-3">
+              <Bookmark size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
+              <div>
+                <h3 className="text-xs font-medium text-gray-700">הערות</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-line">{selectedEvent.notes}</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2 mt-4">
+            {selectedEvent.status === 'active' && (
+              <button
+                onClick={handleArchiveEvent}
+                className="flex items-center px-2 py-1 border border-gray-300 rounded-md text-xs text-gray-700 hover:bg-gray-50"
+              >
+                <Archive size={14} className="ml-1" />
+                ארכיון
+              </button>
+            )}
+            <button
+              onClick={handleDeleteEvent}
+              className="flex items-center px-2 py-1 border border-red-300 rounded-md text-xs text-red-700 hover:bg-red-50"
+            >
+              <Trash size={14} className="ml-1" />
+              מחק
+            </button>
+            <button
+              onClick={() => {
+                setShowEventPopup(false);
+                handleEditEvent();
+              }}
+              className="flex items-center px-2 py-1 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700"
+            >
+              <Edit size={14} className="ml-1" />
+              ערוך
+            </button>
+          </div>
+        </div>
+        
+        <div 
+          className="event-popup-backdrop"
+          onClick={() => setShowEventPopup(false)}
+        />
+      </>
+    );
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Mobile Menu Button */}
@@ -494,7 +719,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
       )}
 
-      {showEventModal && selectedEvent && (
+      {/* Event Modal - Only show for editing, not for regular event clicks */}
+      {showEventModal && selectedEvent && isEditing && (
         <EventModal
           event={selectedEvent}
           onClose={() => {
@@ -504,11 +730,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           onEdit={handleEditEvent}
           onDelete={async () => {
             try {
-              await deleteEvent(selectedEvent.id);
+              await deleteEventFromStore(selectedEvent.id);
               toast.success('האירוע נמחק בהצלחה');
-              await fetchEvents();
               setShowEventModal(false);
-              setSelectedEvent(null);
+              await fetchEvents();
             } catch (error) {
               console.error('Error deleting event:', error);
               toast.error('שגיאה במחיקת האירוע');
@@ -516,11 +741,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           }}
           onArchive={async () => {
             try {
-              await archiveEvent(selectedEvent.id);
+              await updateEventFromStore({ id: selectedEvent.id, status: 'archived' });
               toast.success('האירוע הועבר לארכיון בהצלחה');
-              await fetchEvents();
               setShowEventModal(false);
-              setSelectedEvent(null);
+              await fetchEvents();
             } catch (error) {
               console.error('Error archiving event:', error);
               toast.error('שגיאה בהעברת האירוע לארכיון');
@@ -533,7 +757,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       {showEventForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full mx-auto">
-            <h2 className="text-2xl font-bold mb-4">{isEditing ? 'עריכת אירוע' : 'הוספת אירוע'}</h2>
             <EventForm
               event={isEditing ? selectedEvent : undefined}
               onSubmit={async (eventData) => {
@@ -571,6 +794,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           onClose={() => setShowWeeklyReport(false)}
         />
       )}
+
+      {/* Event Popup */}
+      {showEventPopup && <EventPopup />}
     </div>
   );
 };
