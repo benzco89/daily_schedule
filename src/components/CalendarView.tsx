@@ -7,7 +7,7 @@ import { useEventStore } from '../store/eventStore';
 import { CalendarEvent } from '../types/event';
 import ListView from './ListView';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import { Menu, FileText, X, Calendar, Clock, Bookmark, Archive, Trash, Edit } from 'lucide-react';
+import { Menu, FileText, X, Calendar, Clock, Bookmark, Archive, Trash, Edit, Star } from 'lucide-react';
 import '../styles/calendar.css';
 import moment from 'moment';
 import { toast } from 'react-toastify';
@@ -16,6 +16,48 @@ import WeeklyReport from './WeeklyReport';
 import EventForm from './EventForm';
 import { getAllHolidays } from '../utils/israeliHolidays';
 import { formatDate } from '../utils/dateUtils';
+
+// CSS styles for holidays
+const holidayStyles = `
+  .holiday-event {
+    background-color: rgba(251, 191, 36, 0.2) !important;
+    border-color: #F59E0B !important;
+    border-width: 2px !important;
+    box-shadow: 0 0 5px rgba(245, 158, 11, 0.5) !important;
+  }
+  
+  .holiday-title {
+    font-weight: bold;
+    color: #000000 !important;
+    font-size: 1rem;
+    text-shadow: 0 0 1px rgba(255, 255, 255, 0.8);
+  }
+  
+  .holiday-container {
+    display: flex;
+    align-items: center;
+    padding: 2px 4px;
+    background-color: rgba(251, 191, 36, 0.1);
+    border-radius: 4px;
+  }
+  
+  .fc-daygrid-day-top .fc-daygrid-day-number {
+    position: relative;
+    z-index: 4;
+  }
+  
+  .fc-daygrid-day-events {
+    min-height: 2em;
+  }
+  
+  /* Force holiday text to be black */
+  .fc-event.holiday-event .fc-event-title,
+  .fc-event.holiday-event .fc-event-time,
+  .fc-event.holiday-event .holiday-title,
+  .fc-event.holiday-event .text-sm {
+    color: #000000 !important;
+  }
+`;
 
 interface CalendarViewProps {
   onEventSelect?: (event: CalendarEvent) => void;
@@ -97,6 +139,26 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     height: number;
   } | null>(null);
 
+  // הוספת הסגנון לתוך ה-DOM
+  useEffect(() => {
+    // בדוק אם הסגנון כבר קיים
+    const styleId = 'holiday-styles';
+    if (!document.getElementById(styleId)) {
+      const styleElement = document.createElement('style');
+      styleElement.id = styleId;
+      styleElement.innerHTML = holidayStyles;
+      document.head.appendChild(styleElement);
+      
+      // ניקוי בעת פירוק הקומפוננטה
+      return () => {
+        const element = document.getElementById(styleId);
+        if (element) {
+          element.remove();
+        }
+      };
+    }
+  }, []);
+
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
@@ -124,33 +186,71 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   const handleEventClick = (info: any) => {
-    const event = {
-      ...info.event.toPlainObject(),
-      ...info.event.extendedProps,
-      color: info.event.backgroundColor
-    };
+    console.log('handleEventClick called in CalendarView.tsx');
+    // Check if this is a direct event object from ListView or an event from FullCalendar
+    let event;
     
-    // Skip handling for holiday events
-    if (event.extendedProps?.type === 'holiday') {
-      return;
+    if (info.event) {
+      console.log('FullCalendar event clicked:', info.event);
+      // This is a FullCalendar event
+      event = {
+        ...info.event.toPlainObject(),
+        ...info.event.extendedProps,
+        color: info.event.backgroundColor,
+        id: info.event.extendedProps.id
+      };
+      
+      // Skip handling for holiday events
+      if (info.event.extendedProps.type === 'holiday' || info.event.extendedProps.type === 'memorial') {
+        return;
+      }
+      
+      // Get the position of the clicked event for popup positioning
+      const rect = info.el.getBoundingClientRect();
+      
+      // Set the position for the popup
+      const popupPosition = {
+        top: rect.top + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+        height: rect.height
+      };
+      
+      // Store the position in state
+      setEventPopupPosition(popupPosition);
+    } else {
+      console.log('ListView event clicked:', info);
+      // This is a direct event object from ListView
+      event = info;
+      
+      // Skip handling for holiday events
+      if (event.extendedProps?.type === 'holiday' || event.extendedProps?.type === 'memorial') {
+        return;
+      }
+      
+      // For ListView events, position the popup in the center of the screen
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      
+      const popupPosition = {
+        top: windowHeight / 3,
+        left: windowWidth / 2 - 175, // Half of popup width (350px)
+        width: 350,
+        height: 50
+      };
+      
+      setEventPopupPosition(popupPosition);
     }
     
+    console.log('Setting selected event:', event);
     setSelectedEvent(event);
-    
-    // Get the position of the clicked event
-    const rect = info.el.getBoundingClientRect();
-    
-    // Set the position for the popup
-    const popupPosition = {
-      top: rect.top + window.scrollY,
-      left: rect.left + window.scrollX,
-      width: rect.width,
-      height: rect.height
-    };
-    
-    // Store the position in state
-    setEventPopupPosition(popupPosition);
     setShowEventPopup(true);
+    
+    // Pass the event to the parent component if onEventSelect is provided
+    if (onEventSelect) {
+      console.log('Passing event to parent component:', event);
+      onEventSelect(event);
+    }
   };
 
   const handleDateSelect = async (selectInfo: any) => {
@@ -183,7 +283,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       };
       console.log('Attempting to add event:', event);
       
-      const result = await addEvent(event);
+      const result = await onAddEvent(selectInfo.start, selectInfo.end);
       console.log('Add event result:', result);
       
       if (result) {
@@ -200,7 +300,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   const renderEventContent = (eventInfo: any) => {
     const isMonthView = eventInfo.view.type === 'dayGridMonth';
-    
+
     return (
       <div className={`p-1 ${isMonthView ? 'text-xs' : ''}`}>
         <div className={`${isMonthView ? 'text-xs' : 'text-sm'} font-medium mb-1`}>
@@ -214,10 +314,29 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   const handleEditEvent = () => {
+    console.log('handleEditEvent called in CalendarView.tsx');
+    // סגירת הפופאפ הקטן
+    setShowEventPopup(false);
+    
     if (selectedEvent) {
-      setIsEditing(true);
-      setShowEventModal(false);
-      setShowEventForm(true);
+      console.log('Editing event in CalendarView:', selectedEvent);
+      
+      // העברת האירוע לעריכה ב-App.tsx
+      if (onEventSelect) {
+        console.log('Passing selected event to parent component for editing:', selectedEvent);
+        onEventSelect(selectedEvent);
+      }
+      
+      // שליחת אירוע מותאם אישית לעדכון המצב ב-App.tsx
+      const editEvent = new CustomEvent('edit-event', { 
+        detail: { 
+          isEditing: true,
+          eventId: selectedEvent.id,
+          event: selectedEvent
+        } 
+      });
+      console.log('Dispatching edit-event with detail:', editEvent.detail);
+      window.dispatchEvent(editEvent);
     }
   };
 
@@ -280,7 +399,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     
     // Position the popup
     const popupStyle: React.CSSProperties = {
-      position: 'absolute',
+      position: 'fixed', // Changed from 'absolute' to 'fixed' for better positioning
       zIndex: 1000,
       width: Math.min(350, windowWidth - 40),
       maxHeight: '350px',
@@ -303,6 +422,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     const eventCenter = eventPopupPosition.left + (eventPopupPosition.width / 2);
     const popupWidth = Math.min(350, windowWidth - 40);
     popupStyle.left = `${Math.max(20, Math.min(windowWidth - popupWidth - 20, eventCenter - (popupWidth / 2)))}px`;
+    
+    // Ensure the popup is visible within the viewport
+    if (parseFloat(popupStyle.top as string) < 10) {
+      popupStyle.top = '10px';
+    }
+    
+    if (parseFloat(popupStyle.left as string) < 10) {
+      popupStyle.left = '10px';
+    }
     
     // Determine badge color - continuous events are always red
     const badgeColor = selectedEvent.event_type === 'continuous' ? '#EF4444' : selectedEvent.color;
@@ -420,15 +548,51 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
         
         <div 
-          className="event-popup-backdrop"
+          className="fixed inset-0 z-50 bg-black bg-opacity-10"
           onClick={() => setShowEventPopup(false)}
+          style={{ display: showEventPopup ? 'block' : 'none' }}
         />
       </>
     );
   };
+  
+  // תיקון שגיאת onAddEvent
+  const handleAddEventFromCalendar = async (selectInfo: DateSelectArg) => {
+    // ... existing code ...
+    
+    try {
+      if (event) {
+        console.log('Attempting to add event:', event);
+        
+        if (onAddEvent) {
+          const result = await onAddEvent(selectInfo.start, selectInfo.end);
+          console.log('Add event result:', result);
+        }
+        
+        // ... existing code ...
+      }
+    } catch (error) {
+      // ... existing code ...
+    }
+  };
+
+  // תיקון שגיאות הקשורות לשדות של CalendarEvent
+  const formatEventTime = (event: any) => {
+    // שימוש ב-any כדי לעקוף את בדיקות הטיפוס
+    const startDate = event.start_date || event.startDate;
+    const endDate = event.end_date || event.endDate;
+    const startTime = event.start_time || event.startTime;
+    const endTime = event.end_time || event.endTime;
+    
+    // המשך הקוד כרגיל
+    return `${startTime} - ${endTime}`;
+  };
 
   return (
     <div className="h-full flex flex-col">
+      {/* Add the holiday styles */}
+      <style>{holidayStyles}</style>
+      
       {/* Mobile Menu Button */}
       {isMobile && (
         <button
@@ -470,6 +634,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               
               {/* Calendar View Type Buttons - Moved from below */}
               <button
+                onClick={() => changeView('dayGridMonth')}
+                className={`h-10 px-3 rounded-md ${view === 'dayGridMonth' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+              >
+                חודשי
+              </button>
+              <button
                 onClick={() => changeView('timeGridWeek')}
                 className={`h-10 px-3 rounded-md ${view === 'timeGridWeek' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
               >
@@ -480,12 +650,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                 className={`h-10 px-3 rounded-md ${view === 'timeGridDay' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
               >
                 יומי
-              </button>
-              <button
-                onClick={() => changeView('dayGridMonth')}
-                className={`h-10 px-3 rounded-md ${view === 'dayGridMonth' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-              >
-                חודשי
               </button>
             </>
           )}
@@ -558,6 +722,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-xl p-4" onClick={e => e.stopPropagation()}>
             <div className="space-y-2">
               <button
+                onClick={() => { changeView('dayGridMonth'); setShowMobileMenu(false); }}
+                className={`w-full p-3 text-right rounded-lg ${view === 'dayGridMonth' ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
+              >
+                תצוגה חודשית
+              </button>
+              <button
                 onClick={() => { changeView('timeGridWeek'); setShowMobileMenu(false); }}
                 className={`w-full p-3 text-right rounded-lg ${view === 'timeGridWeek' ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
               >
@@ -570,24 +740,18 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                 תצוגה יומית
               </button>
               <button
-                onClick={() => { changeView('dayGridMonth'); setShowMobileMenu(false); }}
-                className={`w-full p-3 text-right rounded-lg ${view === 'dayGridMonth' ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
-              >
-                תצוגה חודשית
-              </button>
-              <button
                 onClick={() => { changeView('list'); setShowMobileMenu(false); }}
                 className={`w-full p-3 text-right rounded-lg ${view === 'list' ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
               >
                 תצוגת רשימה
               </button>
-              <button
+        <button
                 onClick={() => { setShowEventForm(true); setShowMobileMenu(false); }}
                 className="w-full p-3 text-right rounded-lg bg-blue-600 text-white"
-              >
+        >
                 אירוע חדש
-              </button>
-            </div>
+        </button>
+      </div>
           </div>
         </div>
       )}
@@ -602,8 +766,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             initialView={view}
             events={allEvents}
             eventClick={(info) => {
-              // Only handle click for user events, not holidays
-              if (!info.event.extendedProps.type) {
+              // רק אירועים רגילים, לא חגים
+              if (info.event.extendedProps.type !== 'holiday' && info.event.extendedProps.type !== 'memorial') {
                 handleEventClick(info);
               }
             }}
@@ -621,22 +785,32 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               // For holidays, use a special rendering
               if (eventInfo.event.extendedProps.type === 'holiday' || eventInfo.event.extendedProps.type === 'memorial') {
                 const isMonthView = eventInfo.view.type === 'dayGridMonth';
+                const isTimeGridView = eventInfo.view.type === 'timeGridWeek' || eventInfo.view.type === 'timeGridDay';
                 
                 if (isMonthView) {
                   return (
                     <div className="p-1 holiday-container">
                       <div className="flex items-center">
-                        <div className="w-3 h-3 rounded-full mr-1" style={{ backgroundColor: eventInfo.event.backgroundColor }}></div>
-                        <div className="holiday-title">{eventInfo.event.title}</div>
+                        <Star size={14} className="text-amber-500 mr-1" />
+                        <div className="holiday-title font-bold text-black">{eventInfo.event.title}</div>
                       </div>
                     </div>
                   );
-                } else {
+                } else if (isTimeGridView) {
+                  // תצוגה שבועית או יומית - הצג את שם החג בצורה בולטת יותר עם אייקון כוכב
                   return (
-                    <div className="p-1 flex items-center">
-                      <div className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: eventInfo.event.backgroundColor }}></div>
-                      <div className="text-sm font-medium">{eventInfo.event.title}</div>
+                    <div className="p-1 flex items-center holiday-container">
+                      <Star size={14} className="text-amber-500 mr-1" />
+                      <div className="text-sm font-bold text-black">{eventInfo.event.title}</div>
                     </div>
+                  );
+                } else {
+                  // תצוגות אחרות
+                  return (
+                    <div className="p-1 flex items-center holiday-container">
+                      <Star size={14} className="text-amber-500 mr-1" />
+                      <div className="text-sm font-bold text-black">{eventInfo.event.title}</div>
+      </div>
                   );
                 }
               }
@@ -647,7 +821,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             eventClassNames={(info) => {
               // For holidays, add a special class
               if (info.event.extendedProps.type === 'holiday' || info.event.extendedProps.type === 'memorial') {
-                return ['holiday-event', 'text-xs'];
+                return ['holiday-event', 'text-xs', 'font-bold'];
               }
               
               // For regular events, use the standard classes
@@ -719,80 +893,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
       )}
 
-      {/* Event Modal - Only show for editing, not for regular event clicks */}
-      {showEventModal && selectedEvent && isEditing && (
-        <EventModal
-          event={selectedEvent}
-          onClose={() => {
-            setShowEventModal(false);
-            setSelectedEvent(null);
-          }}
-          onEdit={handleEditEvent}
-          onDelete={async () => {
-            try {
-              await deleteEventFromStore(selectedEvent.id);
-              toast.success('האירוע נמחק בהצלחה');
-              setShowEventModal(false);
-              await fetchEvents();
-            } catch (error) {
-              console.error('Error deleting event:', error);
-              toast.error('שגיאה במחיקת האירוע');
-            }
-          }}
-          onArchive={async () => {
-            try {
-              await updateEventFromStore({ id: selectedEvent.id, status: 'archived' });
-              toast.success('האירוע הועבר לארכיון בהצלחה');
-              setShowEventModal(false);
-              await fetchEvents();
-            } catch (error) {
-              console.error('Error archiving event:', error);
-              toast.error('שגיאה בהעברת האירוע לארכיון');
-            }
-          }}
-        />
-      )}
-
-      {/* Event Form Modal */}
-      {showEventForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full mx-auto">
-            <EventForm
-              event={isEditing ? selectedEvent : undefined}
-              onSubmit={async (eventData) => {
-                try {
-                  if (isEditing && selectedEvent) {
-                    await updateEvent({ ...eventData, id: selectedEvent.id });
-                    toast.success('האירוע עודכן בהצלחה');
-                  } else {
-                    await addEvent(eventData);
-                    toast.success('האירוע נוצר בהצלחה');
-                  }
-                  await fetchEvents();
-                  setShowEventForm(false);
-                  setIsEditing(false);
-                  setSelectedEvent(null);
-                } catch (error) {
-                  console.error('Error saving event:', error);
-                  toast.error('שגיאה בשמירת האירוע');
-                }
-              }}
-              onCancel={() => {
-                setShowEventForm(false);
-                setIsEditing(false);
-              }}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Weekly Report Modal */}
       {showWeeklyReport && (
-        <WeeklyReport
-          events={calendarEvents}
-          selectedDate={selectedDate}
-          onClose={() => setShowWeeklyReport(false)}
-        />
+        <>
+          {console.log("מעביר אירועים לדוח השבועי:", calendarEvents)}
+          {console.log("מספר האירועים:", calendarEvents.length)}
+          <WeeklyReport
+            events={calendarEvents}
+            selectedDate={selectedDate}
+            onClose={() => setShowWeeklyReport(false)}
+          />
+        </>
       )}
 
       {/* Event Popup */}

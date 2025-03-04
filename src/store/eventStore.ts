@@ -15,6 +15,7 @@ interface EventState {
   selectedEvent: Event | null;
   showContinuousEvents: boolean;
   showArchivedEvents: boolean;
+  showHolidays: boolean;
   
   fetchEvents: () => Promise<void>;
   addEvent: (event: Partial<Event>) => Promise<Event | null>;
@@ -27,6 +28,7 @@ interface EventState {
   setSelectedEvent: (event: Event | null) => void;
   toggleContinuousEvents: () => void;
   toggleArchivedEvents: () => void;
+  setShowHolidays: (show: boolean) => void;
 }
 
 export const useEventStore = create<EventState>((set, get) => ({
@@ -38,7 +40,8 @@ export const useEventStore = create<EventState>((set, get) => ({
   selectedDate: new Date(),
   selectedEvent: null,
   showContinuousEvents: true,
-  showArchivedEvents: false,
+  showArchivedEvents: true,
+  showHolidays: true,
   
   fetchEvents: async () => {
     try {
@@ -333,4 +336,6 @@ export const useEventStore = create<EventState>((set, get) => ({
       calendarEvents: filteredEvents
     });
   },
+  
+  setShowHolidays: (show) => set({ showHolidays: show }),
 }));

@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
 import moment from 'moment-timezone';
-import { Event } from '../types/event';
-import { ChevronRight, ChevronLeft, Printer, X } from 'lucide-react';
+import { Event, CalendarEvent } from '../types/event';
+import { ChevronRight, ChevronLeft, Printer, X, Calendar, Clock, ArrowLeft, ArrowRight } from 'lucide-react';
 import { getAllHolidays } from '../utils/israeliHolidays';
+import { useEventStore } from '../store/eventStore';
 
 interface WeeklyReportProps {
-  events: Event[];
+  events: CalendarEvent[];
   selectedDate: Date;
   onClose: () => void;
 }
 
 const WeeklyReport: React.FC<WeeklyReportProps> = ({ events, selectedDate, onClose }) => {
+  // הגדרת תחילת השבוע - יום ראשון
+  moment.locale('he', { week: { dow: 0 } }); // 0 = יום ראשון
   const [currentWeekStart, setCurrentWeekStart] = useState(moment(selectedDate).startOf('week'));
   const daysInWeek = Array.from({ length: 7 }, (_, i) => moment(currentWeekStart).add(i, 'days'));
   const israeliHolidays = getAllHolidays();
+  const showHolidays = useEventStore(state => state.showHolidays);
   
   const navigateToPreviousWeek = () => {
     setCurrentWeekStart(moment(currentWeekStart).subtract(1, 'week'));
@@ -28,37 +32,82 @@ const WeeklyReport: React.FC<WeeklyReportProps> = ({ events, selectedDate, onClo
   };
   
   const getEventsForDay = (date: moment.Moment) => {
-    return events.filter(event => {
-      const eventStart = moment(event.start_date);
-      const eventEnd = event.end_date ? moment(event.end_date) : eventStart;
+    const dateStr = date.format('YYYY-MM-DD');
+    
+    // הדפסת דיבאג
+    console.log(`בדיקת אירועים ליום: ${dateStr}`);
+    console.log(`מספר האירועים הכולל: ${events.length}`);
+    
+    const filteredEvents = events.filter(event => {
+      // סינון אירועים בארכיון אם צריך
+      if (!shouldShowArchivedEvents() && event.status === 'archived') {
+        return false;
+      }
       
-      return (
-        (event.event_type === 'continuous' && eventStart.isSameOrBefore(date, 'day') && (!event.end_date || moment(event.end_date).isSameOrAfter(date, 'day'))) ||
-        (eventStart.isSame(date, 'day') || (eventEnd && eventStart.isSameOrBefore(date, 'day') && eventEnd.isSameOrAfter(date, 'day')))
-      );
-    }).sort((a, b) => {
+      // המרת תאריכים לפורמט אחיד
+      const eventStart = moment(event.start);
+      const eventEnd = moment(event.end);
+      
+      // הדפסת דיבאג לכל אירוע
+      console.log(`בדיקת אירוע: ${event.title}, תאריך התחלה: ${eventStart.format('YYYY-MM-DD')}, סוג: ${event.event_type}`);
+      
+      // טיפול באירועים מתמשכים
+      if (event.event_type === 'continuous') {
+        // אירוע מתמשך רלוונטי אם היום הנוכחי נמצא בטווח התאריכים של האירוע
+        const isRelevant = eventStart.isSameOrBefore(date, 'day') && 
+               eventEnd.isSameOrAfter(date, 'day');
+        console.log(`  אירוע מתמשך ${event.title} רלוונטי ליום ${dateStr}? ${isRelevant}`);
+        return isRelevant;
+      } 
+      
+      // אירועים רגילים - בדיקה אם הם מתרחשים ביום הזה
+      const isOnThisDay = eventStart.format('YYYY-MM-DD') === dateStr;
+      console.log(`  אירוע ${event.title} מתרחש ביום ${dateStr}? ${isOnThisDay}`);
+      return isOnThisDay;
+    });
+    
+    console.log(`נמצאו ${filteredEvents.length} אירועים ליום ${dateStr}`);
+    
+    return filteredEvents.sort((a, b) => {
+      // מיון האירועים: מתמשכים, יום שלם, ספציפיים לפי זמן
       const typeOrder = { continuous: 0, full_day: 1, time_specific: 2 };
+      
+      // מיון לפי סוג אירוע
       if (a.event_type !== b.event_type) {
-        return typeOrder[a.event_type] - typeOrder[b.event_type];
+        return typeOrder[a.event_type as keyof typeof typeOrder] - 
+               typeOrder[b.event_type as keyof typeof typeOrder];
       }
-      if (a.event_type === 'time_specific' && a.start_time && b.start_time) {
-        return a.start_time.localeCompare(b.start_time);
+      
+      // מיון לפי זמן התחלה (עבור אירועים ספציפיים לפי זמן)
+      if (a.event_type === 'time_specific' && !a.allDay && !b.allDay) {
+        return moment(a.start).diff(moment(b.start));
       }
-      return 0;
+      
+      // מיון לפי כותרת
+      return a.title.localeCompare(b.title);
     });
   };
   
   const getHolidaysForDay = (date: moment.Moment) => {
-    return israeliHolidays.filter(holiday => {
-      const holidayDate = moment(holiday.start);
-      return holidayDate.isSame(date, 'day');
-    });
+    const dateStr = date.format('YYYY-MM-DD');
+    return israeliHolidays.filter(holiday => holiday.date === dateStr);
   };
   
-  const formatEventTime = (event: Event) => {
-    if (event.event_type === 'continuous') return 'מתמשך';
-    if (event.event_type === 'full_day') return 'כל היום';
-    return event.start_time ? `${event.start_time}${event.end_time ? ` - ${event.end_time}` : ''}` : '';
+  const shouldShowHolidays = () => {
+    return showHolidays;
+  };
+  
+  /**
+   * מפרמטת את זמן האירוע
+   * @param event האירוע שאת זמנו יש לפרמט
+   * @returns מחרוזת המייצגת את זמן האירוע
+   */
+  const formatEventTime = (event: CalendarEvent) => {
+    if (event.event_type === 'time_specific' && !event.allDay) {
+      // מציג רק את שעת ההתחלה
+      return moment(event.start).format('HH:mm');
+    }
+    return '';
   };
   
   const getEventStatusText = (status: string) => {
@@ -70,186 +119,186 @@ const WeeklyReport: React.FC<WeeklyReportProps> = ({ events, selectedDate, onClo
     }
   };
   
+  const printReport = () => {
+    window.print();
+  };
+  
+  /**
+   * מחזירה את הסגנון המתאים לאירוע
+   * @param event האירוע
+   * @returns אובייקט עם מחלקות CSS מתאימות
+   */
+  const getEventTypeStyles = (event: CalendarEvent) => {
+    const baseClasses = "rounded-md shadow-sm p-2 transition-all";
+    const isArchived = event.status === 'archived';
+    
+    // שימוש בצבע שבחר המשתמש
+    const userColor = event.color || '#3788d8'; // צבע ברירת מחדל אם אין צבע
+    
+    // יצירת סגנון דינמי עם הצבע שבחר המשתמש - אפקט גרדיאנט יפה
+    const style = {
+      background: `linear-gradient(to right, white, ${userColor}25)`,
+      borderRight: `4px solid ${userColor}`,
+      opacity: isArchived ? 0.7 : 1
+    };
+    
+    return { className: baseClasses, style };
+  };
+  
+  // בדיקה אם להציג אירועים בארכיון - ברירת המחדל היא להציג
+  const shouldShowArchivedEvents = () => {
+    // אם showArchivedEvents לא מוגדר, נחזיר true כברירת מחדל
+    return useEventStore(state => state.showArchivedEvents) ?? true;
+  };
+  
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:inset-auto z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-[1200px] max-h-[90vh] overflow-y-auto print:shadow-none print:max-h-none print:overflow-visible">
-        <div className="p-6 print:p-2">
-          <div className="flex justify-between items-center mb-6 print:mb-2">
-            <div className="flex items-center">
-              <h2 className="text-2xl font-bold text-gray-900">
-                דוח שבועי: {currentWeekStart.format('DD/MM/YYYY')} - {moment(currentWeekStart).add(6, 'days').format('DD/MM/YYYY')}
-              </h2>
-            </div>
-            <div className="flex items-center gap-2 print:hidden">
-              <div className="flex items-center gap-1 ml-4">
-                <button 
-                  onClick={navigateToPreviousWeek} 
-                  className="p-2 rounded-md hover:bg-gray-100"
-                  title="שבוע קודם"
-                >
-                  <ChevronRight size={20} />
-                </button>
-                <button 
-                  onClick={navigateToCurrentWeek} 
-                  className="px-3 py-1 text-sm rounded-md hover:bg-gray-100 border"
-                  title="השבוע הנוכחי"
-                >
-                  היום
-                </button>
-                <button 
-                  onClick={navigateToNextWeek} 
-                  className="p-2 rounded-md hover:bg-gray-100"
-                  title="שבוע הבא"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-              </div>
-              <button 
-                onClick={() => window.print()} 
-                className="p-2 rounded-md hover:bg-gray-100 flex items-center gap-1"
-                title="הדפס"
-              >
-                <Printer size={18} />
-                <span>הדפס</span>
-              </button>
-              <button 
-                onClick={onClose} 
-                className="p-2 rounded-md hover:bg-gray-100"
-                title="סגור"
-              >
-                <X size={18} />
-              </button>
-            </div>
+    <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm z-50 overflow-auto flex items-center justify-center p-4 print:p-0 print:bg-white print:backdrop-blur-none">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-auto print:shadow-none print:max-w-none print:max-h-none">
+        <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center print:hidden z-10">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <button
+              onClick={navigateToPreviousWeek}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="שבוע קודם"
+            >
+              <ArrowRight className="h-5 w-5" />
+            </button>
+            <button
+              onClick={navigateToNextWeek}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="שבוע הבא"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={navigateToCurrentWeek}
+              className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors"
+            >
+              השבוע הנוכחי
+            </button>
           </div>
           
-          <div className="grid grid-cols-7 gap-1">
-            {/* Header row with days */}
-            {daysInWeek.map(day => (
-              <div key={day.format('YYYY-MM-DD')} className="text-center p-2 bg-gray-100 font-semibold rounded-t-lg print:break-inside-avoid">
-                {day.format('dddd')}
-                <div className="text-sm text-gray-600">{day.format('DD/MM')}</div>
-              </div>
-            ))}
-            
-            {/* Events grid */}
-            {daysInWeek.map(day => {
+          <h1 className="text-xl font-bold text-center flex-1">
+            דוח שבועי: {currentWeekStart.format('DD/MM/YYYY')} - {moment(currentWeekStart).add(6, 'days').format('DD/MM/YYYY')}
+          </h1>
+          
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <button
+              onClick={printReport}
+              className="flex items-center px-3 py-1 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+            >
+              <Printer className="h-4 w-4 ml-1 rtl:mr-1 rtl:ml-0" />
+              הדפסה
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="סגור"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 print:p-2">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4 print:gap-2">
+            {daysInWeek.map((day) => {
               const dayEvents = getEventsForDay(day);
-              const dayHolidays = getHolidaysForDay(day);
+              const holidays = shouldShowHolidays() ? getHolidaysForDay(day) : [];
+              const isToday = day.isSame(moment(), 'day');
+              
               return (
-                <div key={day.format('YYYY-MM-DD')} className="min-h-[500px] p-1 border rounded-b-lg print:break-inside-avoid">
-                  {/* Holidays Section */}
-                  {dayHolidays.length > 0 && (
-                    <div className="mb-2">
-                      {dayHolidays.map(holiday => (
-                        <div
-                          key={holiday.id}
-                          className="p-2 rounded text-sm bg-amber-50 border-r-2 border-amber-500 mb-1"
-                        >
-                          <div className="font-medium">{holiday.title}</div>
-                          <div className="text-xs text-gray-600">חג/מועד</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <div 
+                  key={day.format('YYYY-MM-DD')} 
+                  className={`border rounded-lg overflow-hidden ${isToday ? 'ring-2 ring-blue-400' : ''}`}
+                >
+                  <div className={`font-bold text-center p-2 ${isToday ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}>
+                    <div className="text-lg">{day.format('dddd')}</div>
+                    <div className="text-sm">{day.format('DD/MM/YYYY')}</div>
+                  </div>
                   
-                  {/* Regular Events Section */}
-                  <div className="space-y-1">
-                    {dayEvents.length === 0 && dayHolidays.length === 0 && (
-                      <div className="text-center text-gray-400 py-4 text-sm">אין אירועים</div>
-                    )}
-                    {dayEvents.map(event => (
-                      <div
-                        key={event.id}
-                        className={`p-2 rounded text-sm ${
-                          event.event_type === 'continuous' 
-                            ? 'bg-red-50 border-r-2 border-red-500'
-                            : 'bg-gray-50 border-r-2'
-                        }`}
-                        style={{ borderRightColor: event.event_type === 'continuous' ? '#EF4444' : event.color }}
-                      >
-                        <div className="font-medium">{event.title}</div>
-                        <div className="text-xs text-gray-600">{formatEventTime(event)}</div>
-                        {event.details && (
-                          <div className="text-xs text-gray-600 mt-1 line-clamp-2">{event.details}</div>
-                        )}
+                  <div className="p-2 space-y-2 min-h-[150px]">
+                    {holidays.length > 0 && (
+                      <div className="space-y-1">
+                        {holidays.map((holiday) => (
+                          <div 
+                            key={holiday.id} 
+                            className="bg-gradient-to-r from-amber-50 to-amber-100 text-amber-800 p-2 rounded-md border-r-4 border-amber-500 text-sm print:text-xs shadow-sm"
+                          >
+                            <div className="font-medium">{holiday.name}</div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+                    
+                    <div className="space-y-2">
+                      {dayEvents.length === 0 && holidays.length === 0 ? (
+                        <div className="text-gray-400 text-sm text-center py-4">אין אירועים</div>
+                      ) : (
+                        dayEvents.map((event) => (
+                          <div 
+                            key={event.id} 
+                            className={getEventTypeStyles(event).className}
+                            style={getEventTypeStyles(event).style}
+                          >
+                            <div className="font-medium flex items-center justify-between">
+                              <span>{event.title}</span>
+                              {event.status !== 'active' && (
+                                <span className="text-xs bg-gray-200 text-gray-700 px-1 py-0.5 rounded-full">
+                                  {getEventStatusText(event.status)}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {event.event_type === 'continuous' && (
+                              <div className="text-xs text-purple-700 mt-1 flex items-center">
+                                <Calendar className="h-3 w-3 mr-1" />
+                                {moment(event.start).format('DD/MM')} 
+                                {` - ${moment(event.end).format('DD/MM')}`}
+                              </div>
+                            )}
+                            
+                            {event.event_type === 'time_specific' && !event.allDay && (
+                              <div className="text-xs text-blue-700 mt-1 flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {formatEventTime(event)}
+                              </div>
+                            )}
+                            
+                            {event.details && (
+                              <div className="text-xs mt-1 line-clamp-2 text-gray-600 pt-1 border-t border-gray-100">
+                                {event.details}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
+        
+        <style jsx>{`
+          @media print {
+            @page {
+              size: landscape;
+              margin: 1cm;
+            }
+            
+            body {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            
+            .min-h-[150px] {
+              min-height: auto !important;
+            }
+          }
+        `}</style>
       </div>
-      
-      <style>{`
-        @media print {
-          @page {
-            size: A4 landscape;
-            margin: 1cm;
-          }
-          
-          body {
-            font-size: 9pt;
-          }
-          
-          .print-hidden {
-            display: none !important;
-          }
-          
-          h2 {
-            font-size: 16pt;
-            margin-bottom: 0.5cm;
-          }
-          
-          .grid {
-            display: grid !important;
-            grid-template-columns: repeat(7, 1fr) !important;
-          }
-          
-          .min-h-[500px] {
-            min-height: auto !important;
-            height: auto !important;
-          }
-          
-          /* Ensure content fits on one page */
-          .grid-cols-7 > * {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-          
-          /* Better contrast for printed text */
-          .text-gray-600 {
-            color: #444 !important;
-          }
-          
-          /* Ensure borders print well */
-          .border {
-            border: 1px solid #000 !important;
-          }
-          
-          .border-r-2 {
-            border-right-width: 2px !important;
-          }
-          
-          /* Background colors for print */
-          .bg-gray-50 {
-            background-color: #ffffff !important;
-          }
-          
-          .bg-red-50 {
-            background-color: #fff5f5 !important;
-          }
-          
-          .bg-amber-50 {
-            background-color: #fffbeb !important;
-          }
-          
-          .bg-gray-100 {
-            background-color: #f3f4f6 !important;
-          }
-        }
-      `}</style>
     </div>
   );
 };

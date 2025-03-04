@@ -48,6 +48,47 @@ function App() {
     }
   }, [error]);
   
+  // Listen for edit-event custom event from CalendarView
+  useEffect(() => {
+    const handleEditEventFromCalendar = (event: CustomEvent) => {
+      console.log('Received edit-event from CalendarView:', event.detail);
+      if (event.detail && event.detail.isEditing) {
+        // Check if the event data is included in the custom event
+        if (event.detail.event) {
+          console.log('Using event data from custom event:', event.detail.event);
+          setSelectedEvent(event.detail.event);
+          setIsEditing(true);
+          setShowEventForm(true);
+          return;
+        }
+        
+        // Make sure we're using the same selected event
+        if (event.detail.eventId) {
+          // Find the event in the store if needed
+          const eventToEdit = events.find(e => e.id === event.detail.eventId);
+          if (eventToEdit) {
+            console.log('Setting selected event for editing:', eventToEdit);
+            setSelectedEvent(eventToEdit);
+            // Set editing state after setting the selected event
+            setIsEditing(true);
+            setShowEventForm(true);
+          }
+        } else if (selectedEvent) {
+          // If no eventId provided but we have a selected event, use that
+          console.log('Using already selected event for editing:', selectedEvent);
+          setIsEditing(true);
+          setShowEventForm(true);
+        }
+      }
+    };
+
+    window.addEventListener('edit-event', handleEditEventFromCalendar as EventListener);
+    
+    return () => {
+      window.removeEventListener('edit-event', handleEditEventFromCalendar as EventListener);
+    };
+  }, [events, selectedEvent, setSelectedEvent]);
+  
   const handleAddEvent = (start: Date, end: Date) => {
     setNewEventDate({ start, end });
     setShowEventForm(true);
@@ -56,19 +97,36 @@ function App() {
   };
   
   const handleEventSelect = (event: CalendarEvent | Event) => {
+    console.log('handleEventSelect called in App.tsx with event:', event);
     // Find the full event data from the events array
     const fullEvent = events.find(e => e.id === event.id);
     if (fullEvent) {
+      console.log('Found full event:', fullEvent);
       setSelectedEvent(fullEvent);
-      setIsEditing(false);
+      // Don't reset isEditing here, let the specific handlers manage this state
+    } else {
+      console.log('Could not find full event in events array, using event as is:', event);
+      // If we can't find the event in the events array, use the event as is
+      setSelectedEvent(event as Event);
     }
   };
   
   const handleEditEvent = () => {
+    console.log('handleEditEvent called in App.tsx');
     if (selectedEvent) {
+      console.log('Editing event:', selectedEvent);
       setIsEditing(true);
       setNewEventDate(null); // Clear any default dates when editing
       setShowEventForm(true); // Make sure the form is shown when editing
+      
+      // Dispatch a custom event to ensure synchronization with CalendarView
+      const editEvent = new CustomEvent('edit-event', { 
+        detail: { 
+          isEditing: true,
+          eventId: selectedEvent.id 
+        } 
+      });
+      window.dispatchEvent(editEvent);
     }
   };
   
@@ -169,23 +227,26 @@ function App() {
         )}
       </main>
       
-      {/* Event Form Modal */}
+      {/* Event Form */}
       {showEventForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <EventForm
-            event={isEditing ? selectedEvent : undefined}
-            onSubmit={handleFormSubmit}
-            onCancel={() => {
-              setShowEventForm(false);
-              setIsEditing(false);
-              setSelectedEvent(null);
-              setNewEventDate(null);
-            }}
-          />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full mx-auto">
+            <EventForm
+              event={isEditing && selectedEvent ? selectedEvent : (newEventDate ? { start_date: newEventDate.start.toISOString().split('T')[0], end_date: newEventDate.end.toISOString().split('T')[0] } : undefined)}
+              onSubmit={handleFormSubmit}
+              onCancel={() => {
+                setShowEventForm(false);
+                setIsEditing(false);
+                setSelectedEvent(null);
+                setNewEventDate(null);
+              }}
+            />
+          </div>
         </div>
       )}
       
       {/* Event Details Modal */}
+      {/* הסרת החלון הגדול כדי שרק הפופאפ הקטן יופיע
       {selectedEvent && !isEditing && !showEventForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <EventModal
@@ -197,6 +258,7 @@ function App() {
           />
         </div>
       )}
+      */}
       
       <ToastContainer
         position="top-center"

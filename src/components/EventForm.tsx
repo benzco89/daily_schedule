@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { X, Calendar, Clock, FileText, Bookmark, Tag } from 'lucide-react';
 import { Event, EventType } from '../types/event';
+import moment from 'moment';
 
 interface EventFormProps {
   event?: Partial<Event>;
@@ -23,6 +24,8 @@ const colorOptions = [
 
 const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
   const [eventType, setEventType] = useState<EventType>(event?.event_type || 'time_specific');
+  const [isContinuousActive, setIsContinuousActive] = useState(event?.end_date ? false : true);
+  const isEditing = !!event?.id;
   
   // Get current time in HH:MM format for default values
   const getCurrentTime = () => {
@@ -41,26 +44,76 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
     return `${hours}:${minutes}`;
   };
   
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, control, setValue, watch, formState: { errors }, reset } = useForm({
     defaultValues: {
-      title: event?.title || '',
-      details: event?.details || '',
-      notes: event?.notes || '',
-      event_type: event?.event_type || 'time_specific',
-      start_date: event?.start_date || '',
-      end_date: event?.end_date || '',
-      start_time: event?.start_time || '',
-      end_time: event?.end_time || '',
-      color: event?.event_type === 'continuous' ? '#EF4444' : (event?.color || '#3B82F6'),
-      status: event?.status || 'active',
-      is_continuous_active: event?.event_type === 'continuous' && !event?.end_date
+      title: '',
+      details: '',
+      notes: '',
+      event_type: 'time_specific',
+      start_date: '',
+      end_date: '',
+      start_time: '',
+      end_time: '',
+      color: '#3B82F6',
+      status: 'active',
+      is_continuous_active: false
     }
   });
   
   const selectedEventType = watch('event_type');
   const selectedColor = watch('color');
-  const isContinuousActive = watch('is_continuous_active');
   
+  // Set values when editing an existing event
+  useEffect(() => {
+    console.log('EventForm useEffect triggered with event:', event, 'isEditing:', isEditing);
+    if (event && isEditing) {
+      console.log('EventForm received event for editing:', event);
+      // Format dates for the form
+      const formattedStartDate = event.start_date ? moment(event.start_date).format('YYYY-MM-DD') : '';
+      const formattedEndDate = event.end_date ? moment(event.end_date).format('YYYY-MM-DD') : '';
+      
+      console.log('Formatted dates:', { formattedStartDate, formattedEndDate });
+      
+      // Set default values for the form
+      reset({
+        title: event.title || '',
+        details: event.details || '',
+        notes: event.notes || '',
+        event_type: event.event_type || 'regular',
+        start_date: formattedStartDate,
+        end_date: formattedEndDate,
+        start_time: event.start_time || '',
+        end_time: event.end_time || '',
+        color: event.color || '#3B82F6',
+        status: event.status || 'active',
+        is_continuous_active: event.event_type === 'continuous' && !event.end_date
+      });
+      
+      console.log('Form reset with values:', {
+        title: event.title || '',
+        details: event.details || '',
+        notes: event.notes || '',
+        event_type: event.event_type || 'regular',
+        start_date: formattedStartDate,
+        end_date: formattedEndDate,
+        start_time: event.start_time || '',
+        end_time: event.end_time || '',
+        color: event.color || '#3B82F6',
+        status: event.status || 'active',
+        is_continuous_active: event.event_type === 'continuous' && !event.end_date
+      });
+      
+      // Set event type state
+      setEventType(event.event_type as EventType);
+      
+      // Set continuous event state
+      setIsContinuousActive(event.event_type === 'continuous' && !event.end_date);
+    }
+  }, [event, isEditing, reset]);
+  
+  // אין יותר הגדרת ערכים אוטומטיים לאירועים חדשים - המשתמש יזין אותם
+  
+  // Track changes to event type from the form
   useEffect(() => {
     setEventType(selectedEventType as EventType);
     
@@ -68,18 +121,28 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
     if (selectedEventType === 'continuous') {
       setValue('color', '#EF4444');
     }
-    
-    // Don't set default times automatically
-  }, [selectedEventType, setValue, watch]);
+  }, [selectedEventType, setValue]);
   
-  // Handle continuous event toggle
+  // Track changes to is_continuous_active from the form
+  const isContinuousActiveValue = watch('is_continuous_active');
   useEffect(() => {
-    if (selectedEventType === 'continuous' && isContinuousActive) {
+    setIsContinuousActive(isContinuousActiveValue);
+    
+    if (selectedEventType === 'continuous' && isContinuousActiveValue) {
       setValue('end_date', '');
     }
-  }, [isContinuousActive, selectedEventType, setValue]);
+  }, [isContinuousActiveValue, selectedEventType, setValue]);
   
   const handleFormSubmit = (data: any) => {
+    // Ensure dates are in the correct format
+    if (data.start_date) {
+      data.start_date = moment(data.start_date).format('YYYY-MM-DD');
+    }
+    
+    if (data.end_date) {
+      data.end_date = moment(data.end_date).format('YYYY-MM-DD');
+    }
+    
     // If it's a continuous event and is active, remove end date
     if (data.event_type === 'continuous' && data.is_continuous_active) {
       data.end_date = null;
@@ -100,6 +163,23 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
       endDate.setHours(endDate.getHours() + 1);
       
       data.end_time = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+    }
+    
+    // Ensure time fields are in the correct format
+    if (data.event_type === 'time_specific') {
+      if (data.start_time) {
+        const [hours, minutes] = data.start_time.split(':').map(Number);
+        data.start_time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      }
+      
+      if (data.end_time) {
+        const [hours, minutes] = data.end_time.split(':').map(Number);
+        data.end_time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      }
+    } else {
+      // For non-time-specific events, set time fields to null
+      data.start_time = null;
+      data.end_time = null;
     }
     
     // Remove the is_continuous_active field before submitting

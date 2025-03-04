@@ -3,6 +3,42 @@ import moment from 'moment-timezone';
 import { CalendarEvent } from '../types/event';
 import { useEventStore } from '../store/eventStore';
 import { getAllHolidays } from '../utils/israeliHolidays';
+import { Star } from 'lucide-react';
+
+// CSS styles for holiday events in the list
+const holidayListStyles = `
+  .holiday-event {
+    background-color: rgba(251, 191, 36, 0.2) !important;
+    border-color: #F59E0B !important;
+    border-width: 2px !important;
+    box-shadow: 0 0 5px rgba(245, 158, 11, 0.5) !important;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .holiday-event::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 20px 20px 0;
+    border-color: transparent #F59E0B transparent transparent;
+    z-index: 1;
+  }
+  
+  .holiday-event h3 {
+    color: #000000 !important;
+    font-weight: bold;
+    font-size: 1.1rem;
+  }
+  
+  .holiday-event p {
+    color: #000000 !important;
+  }
+`;
 
 interface ListViewProps {
   onEventSelect: (event: CalendarEvent) => void;
@@ -34,6 +70,20 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
       
       // If day view is selected
       if (viewMode === 'day' && selectedDay) {
+        // אירועים מתמשכים תמיד יוצגו בכל יום
+        if (event.event_type === 'continuous') {
+          return true;
+        }
+        
+        // חגים תמיד יוצגו
+        if (event.extendedProps?.type === 'holiday' || event.extendedProps?.type === 'memorial') {
+          // אבל רק אם הם בשבוע הנוכחי
+          const startOfWeek = moment(selectedDate).startOf('week');
+          const endOfWeek = moment(startOfWeek).add(6, 'days').endOf('day');
+          return eventStart.isBetween(startOfWeek, endOfWeek, 'day', '[]');
+        }
+        
+        // אירועים רגילים יוצגו רק אם הם ביום הנבחר
         return eventStart.isSame(selectedDay, 'day') || 
                eventEnd.isSame(selectedDay, 'day') ||
                (eventStart.isBefore(selectedDay, 'day') && eventEnd.isAfter(selectedDay, 'day'));
@@ -73,6 +123,26 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
     
     setFilteredEvents(sortedEvents);
   }, [calendarEvents, selectedDay, selectedDate, viewMode, showHolidays, israeliHolidays]);
+  
+  // הוספת הסגנון לתוך ה-DOM
+  useEffect(() => {
+    // בדוק אם הסגנון כבר קיים
+    const styleId = 'holiday-list-styles';
+    if (!document.getElementById(styleId)) {
+      const styleElement = document.createElement('style');
+      styleElement.id = styleId;
+      styleElement.innerHTML = holidayListStyles;
+      document.head.appendChild(styleElement);
+      
+      // ניקוי בעת פירוק הקומפוננטה
+      return () => {
+        const element = document.getElementById(styleId);
+        if (element) {
+          element.remove();
+        }
+      };
+    }
+  }, []);
   
   // Generate array of days for the current week
   const daysInWeek = Array.from({ length: 7 }, (_, i) => {
@@ -143,14 +213,50 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
   };
   
   const formatEventTime = (event: CalendarEvent) => {
-    if (event.event_type === 'continuous') return 'מתמשך';
-    if (event.event_type === 'full_day') return 'כל היום';
-    if (event.extendedProps?.type === 'holiday') return 'חג/מועד';
+    // אם זה חג, הצג "חג/מועד" או "יום זיכרון"
+    if (event.extendedProps?.type === 'holiday') {
+      return 'חג/מועד';
+    } else if (event.extendedProps?.type === 'memorial') {
+      return 'יום זיכרון';
+    }
+    
+    // אם זה אירוע רגיל, הצג את הזמן
     return event.start_time ? `${event.start_time}${event.end_time ? ` - ${event.end_time}` : ''}` : '';
+  };
+  
+  // פונקציה לטיפול בלחיצה על אירוע
+  const handleEventClick = (event: CalendarEvent) => {
+    // דלג על אירועי חג
+    if (event.extendedProps?.type === 'holiday' || event.extendedProps?.type === 'memorial') {
+      return;
+    }
+    
+    // וודא שהאירוע מכיל את כל המידע הנדרש
+    const completeEvent = {
+      ...event,
+      id: event.id,
+      title: event.title,
+      details: event.details || '',
+      notes: event.notes || '',
+      event_type: event.event_type,
+      start_date: event.start_date || moment(event.start).format('YYYY-MM-DD'),
+      end_date: event.end_date || (event.end ? moment(event.end).format('YYYY-MM-DD') : null),
+      start_time: event.start_time,
+      end_time: event.end_time,
+      color: event.color,
+      status: event.status || 'active',
+      extendedProps: event.extendedProps || {}
+    };
+    
+    // העבר את האירוע לפונקציית הבחירה
+    onEventSelect(completeEvent);
   };
   
   return (
     <div className="p-4 bg-white min-h-screen">
+      {/* Add holiday styles */}
+      <style>{holidayListStyles}</style>
+      
       {/* Day selector */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
         <button
@@ -179,6 +285,17 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
         {viewMode === 'day' ? (
           // Day view - simple list of events
           <div className="space-y-2">
+            {selectedDay && (
+              <h2 className="text-lg font-bold mb-3 pb-2 border-b">
+                {moment(selectedDay).format('dddd')}, {moment(selectedDay).format('D/M/YYYY')}
+                {viewMode === 'day' && (
+                  <span className="text-sm font-normal text-gray-500 mr-2">
+                    (מציג גם אירועים מתמשכים וחגים מהשבוע)
+                  </span>
+                )}
+              </h2>
+            )}
+            
             {filteredEvents.length === 0 ? (
               <div className="text-center text-gray-500 py-8">
                 אין אירועים ביום זה
@@ -187,7 +304,7 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
               filteredEvents.map(event => (
                 <div
                   key={event.id}
-                  onClick={() => onEventSelect(event)}
+                  onClick={() => handleEventClick(event)}
                   className="p-4 rounded-lg border cursor-pointer hover:shadow-md transition-shadow"
                   style={{
                     borderColor: event.extendedProps?.type === 'holiday' ? '#F59E0B' : 
@@ -230,27 +347,42 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
                   {dayEvents.length === 0 ? (
                     <div className="text-center text-gray-500 py-2">
                       אין אירועים ביום זה
-                    </div>
+                </div>
                   ) : (
-                    <div className="space-y-2">
+                <div className="space-y-2">
                       {dayEvents.map((event, idx) => (
-                        <div
+                        <div 
                           key={`${event.id}-${idx}`}
-                          onClick={() => onEventSelect(event)}
-                          className="p-3 rounded-lg border cursor-pointer hover:shadow-md transition-shadow"
-                          style={{
+                          onClick={() => handleEventClick(event)}
+                          className={`p-3 rounded-lg border cursor-pointer hover:shadow-md transition-shadow ${
+                            event.extendedProps?.type === 'holiday' ? 'holiday-event' : ''
+                          }`}
+                          style={{ 
                             borderColor: event.extendedProps?.type === 'holiday' ? '#F59E0B' : 
                                         event.event_type === 'continuous' ? '#EF4444' : event.color,
                             backgroundColor: event.extendedProps?.type === 'holiday' ? '#FEF3C7' : 
                                             event.event_type === 'continuous' ? '#FEF2F2' : `${event.color}10`,
+                            borderWidth: event.extendedProps?.type === 'holiday' ? '2px' : '1px',
                           }}
                         >
                           <div className="flex justify-between items-start">
                             <div>
-                              <h3 className="text-base font-bold">{event.title}</h3>
-                              <p className="text-sm text-gray-600">
+                              <h3 className="text-base font-bold flex items-center">
+                                {event.extendedProps?.type === 'holiday' && (
+                                  <Star size={16} className="text-amber-500 ml-1 inline-block" />
+                                )}
+                                <span className={event.extendedProps?.type === 'holiday' ? 'text-black' : ''}>
+                                  {event.title}
+                                </span>
+                              </h3>
+                              <p className={`text-sm ${event.extendedProps?.type === 'holiday' ? 'text-black' : 'text-gray-600'}`}>
                                 {formatEventTime(event)}
                               </p>
+                          {event.details && (
+                                <p className={`text-sm ${event.extendedProps?.type === 'holiday' ? 'text-black' : 'text-gray-600'} mt-1 line-clamp-2`}>
+                              {event.details}
+                            </p>
+                          )}
                             </div>
                           </div>
                         </div>
