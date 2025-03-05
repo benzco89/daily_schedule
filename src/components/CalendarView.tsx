@@ -8,7 +8,7 @@ import { useEventStore } from '../store/eventStore';
 import { CalendarEvent } from '../types/event';
 import ListView from './ListView';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import { Menu, FileText, X, Calendar, Clock, Bookmark, Archive, Trash, Edit, Star } from 'lucide-react';
+import { Menu, FileText, X, Calendar, Clock, Bookmark, Archive, Trash, Edit, Star, Plus } from 'lucide-react';
 import '../styles/calendar.css';
 import moment from 'moment';
 import { toast } from 'react-toastify';
@@ -75,6 +75,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     height: number;
   } | null>(null);
   const israeliHolidays = getAllHolidays();
+  const [isNewEventPopup, setIsNewEventPopup] = useState(false);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<{start: Date, end: Date} | null>(null);
 
   // הוספת הסגנון לתוך ה-DOM
   useEffect(() => {
@@ -210,43 +212,31 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     const calendarApi = selectInfo.view.calendar;
     calendarApi.unselect(); // clear date selection
 
-    const title = prompt('כותרת האירוע:');
-    console.log('Event title:', title);
-    
-    if (!title) {
-      toast.info('הוספת האירוע בוטלה');
-      return;
+    // נשמור את מידע הבחירה כדי שנוכל להשתמש בו אם המשתמש יבחר ליצור אירוע חדש
+    setSelectedTimeSlot({
+      start: selectInfo.start,
+      end: selectInfo.end
+    });
+
+    // חישוב מיקום הפופאפ - נשתמש בחישוב דומה לזה שמשמש לאירועים קיימים
+    if (typeof window !== 'undefined') {
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      
+      // מיקום הפופאפ במרכז האזור שנבחר
+      const popupPosition = {
+        top: windowHeight / 3,
+        left: windowWidth / 2 - 175, // Half of popup width (350px)
+        width: 350,
+        height: 50
+      };
+      
+      setEventPopupPosition(popupPosition);
     }
 
-    try {
-      const event = {
-        title,
-        details: null,
-        notes: null,
-        event_type: 'time_specific' as const,
-        start_date: moment(selectInfo.start).format('YYYY-MM-DD'),
-        end_date: moment(selectInfo.end).format('YYYY-MM-DD'),
-        start_time: moment(selectInfo.start).format('HH:mm'),
-        end_time: moment(selectInfo.end).format('HH:mm'),
-        color: '#3B82F6',
-        status: 'active' as const,
-        user_id: null
-      };
-      console.log('Attempting to add event:', event);
-      
-      const result = await onAddEvent(selectInfo.start, selectInfo.end);
-      console.log('Add event result:', result);
-      
-      if (result) {
-        toast.success('האירוע נוצר בהצלחה');
-        await fetchEvents(); // רענון האירועים מיד לאחר ההוספה
-      } else {
-        toast.error('שגיאה ביצירת האירוע');
-      }
-    } catch (error) {
-      console.error('Error adding event:', error);
-      toast.error('שגיאה ביצירת האירוע');
-    }
+    // הצגת הפופאפ
+    setShowEventPopup(true);
+    setIsNewEventPopup(true); // סימון שזה פופאפ ליצירת אירוע חדש
   };
 
   const renderEventContent = (eventInfo: { event: any; timeText: string; view?: { type: string } }) => {
@@ -336,8 +326,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     }
   };
   
+  // עדכון קומפוננטת הפופאפ
   const EventPopup = () => {
-    if (!selectedEvent || !showEventPopup || !eventPopupPosition) return null;
+    if (!eventPopupPosition) return null;
     
     // Calculate optimal position for the popup
     const windowHeight = window.innerHeight;
@@ -350,14 +341,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     
     // Position the popup
     const popupStyle: React.CSSProperties = {
-      position: 'fixed', // Changed from 'absolute' to 'fixed' for better positioning
+      position: 'fixed',
       zIndex: 1000,
       width: Math.min(350, windowWidth - 40),
       maxHeight: '350px',
       backgroundColor: 'white',
       borderRadius: '8px',
       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-      border: `2px solid ${selectedEvent.color || '#3B82F6'}`,
+      border: isNewEventPopup ? '2px solid #3B82F6' : `2px solid ${selectedEvent?.color || '#3B82F6'}`,
       padding: '16px',
       overflow: 'auto'
     };
@@ -383,127 +374,188 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       popupStyle.left = '10px';
     }
     
-    // Determine badge color - continuous events are always red
-    const badgeColor = selectedEvent.event_type === 'continuous' ? '#EF4444' : selectedEvent.color;
-    const badgeTextColor = ['#FFFFFF', '#FFFF00'].includes(badgeColor) ? '#000000' : '#FFFFFF';
-    
     return (
       <>
+        <div 
+          className="fixed inset-0 z-50 bg-black bg-opacity-10"
+          onClick={() => {
+            setShowEventPopup(false);
+            setIsNewEventPopup(false);
+            setSelectedTimeSlot(null);
+          }}
+          style={{ display: showEventPopup ? 'block' : 'none' }}
+        />
         <div 
           className="event-popup"
           style={popupStyle}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex justify-between items-start mb-3">
-            <h3 className="text-lg font-semibold">{selectedEvent.title}</h3>
-            <button 
-              onClick={() => setShowEventPopup(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          
-          {/* Event Type Badge */}
-          <div className="flex items-center mb-3">
-            <span 
-              className="px-2 py-1 rounded-full text-xs font-medium"
-              style={{ 
-                backgroundColor: badgeColor,
-                color: badgeTextColor
-              }}
-            >
-              {selectedEvent.event_type === 'continuous' && 'מתמשך'}
-              {selectedEvent.event_type === 'full_day' && 'יום מלא'}
-              {selectedEvent.event_type === 'time_specific' && 'שעה מוגדרת'}
-            </span>
-            
-            {selectedEvent.status === 'archived' && (
-              <span className="mr-2 px-2 py-1 bg-gray-200 rounded-full text-xs font-medium text-gray-700">
-                בארכיון
-              </span>
-            )}
-          </div>
-          
-          {/* Date and Time */}
-          <div className="flex items-start mb-3">
-            <Calendar size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
-            <div>
-              <p className="text-sm text-gray-700">
-                {selectedEvent.start_date ? formatDate(selectedEvent.start_date) : ''}
-                {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.start_date && 
-                  ` - ${formatDate(selectedEvent.end_date)}`}
-              </p>
-              {selectedEvent.event_type === 'time_specific' && selectedEvent.start_time && (
-                <div className="flex items-center mt-1">
-                  <Clock size={14} className="text-gray-500 ml-1 shrink-0" />
+          {isNewEventPopup ? (
+            // תצוגת פופאפ ליצירת אירוע חדש
+            <>
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="text-lg font-semibold">יצירת אירוע חדש</h3>
+                <button 
+                  onClick={() => {
+                    setShowEventPopup(false);
+                    setIsNewEventPopup(false);
+                    setSelectedTimeSlot(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              {/* Date and Time */}
+              <div className="flex items-start mb-3">
+                <Calendar size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
+                <div>
                   <p className="text-sm text-gray-700">
-                    {selectedEvent.start_time}
-                    {selectedEvent.end_time && ` - ${selectedEvent.end_time}`}
+                    {selectedTimeSlot ? formatDate(selectedTimeSlot.start) : ''}
                   </p>
+                  {selectedTimeSlot && (
+                    <div className="flex items-center mt-1">
+                      <Clock size={14} className="text-gray-500 ml-1 shrink-0" />
+                      <p className="text-sm text-gray-700">
+                        {moment(selectedTimeSlot.start).format('HH:mm')}
+                        {' - '}
+                        {moment(selectedTimeSlot.end).format('HH:mm')}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Details */}
-          {selectedEvent.details && (
-            <div className="flex items-start mb-3">
-              <FileText size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
-              <div>
-                <h3 className="text-xs font-medium text-gray-700">פרטים</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-line">{selectedEvent.details}</p>
               </div>
-            </div>
-          )}
-          
-          {/* Notes */}
-          {selectedEvent.notes && (
-            <div className="flex items-start mb-3">
-              <Bookmark size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
-              <div>
-                <h3 className="text-xs font-medium text-gray-700">הערות</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-line">{selectedEvent.notes}</p>
+              
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  onClick={() => {
+                    if (selectedTimeSlot && onAddEvent) {
+                      onAddEvent(selectedTimeSlot.start, selectedTimeSlot.end);
+                      setShowEventPopup(false);
+                      setIsNewEventPopup(false);
+                      setSelectedTimeSlot(null);
+                    }
+                  }}
+                  className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                >
+                  <Plus size={16} className="ml-1" />
+                  צור אירוע חדש
+                </button>
               </div>
-            </div>
+            </>
+          ) : (
+            // תצוגת פופאפ לאירוע קיים
+            selectedEvent && (
+              <>
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-lg font-semibold">{selectedEvent.title}</h3>
+                  <button 
+                    onClick={() => setShowEventPopup(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                
+                {/* Event Type Badge */}
+                <div className="flex items-center mb-3">
+                  <span 
+                    className="px-2 py-1 rounded-full text-xs font-medium"
+                    style={{ 
+                      backgroundColor: selectedEvent.event_type === 'continuous' ? '#EF4444' : selectedEvent.color,
+                      color: ['#FFFFFF', '#FFFF00'].includes(selectedEvent.color) ? '#000000' : '#FFFFFF'
+                    }}
+                  >
+                    {selectedEvent.event_type === 'continuous' && 'מתמשך'}
+                    {selectedEvent.event_type === 'full_day' && 'יום מלא'}
+                    {selectedEvent.event_type === 'time_specific' && 'שעה מוגדרת'}
+                  </span>
+                  
+                  {selectedEvent.status === 'archived' && (
+                    <span className="mr-2 px-2 py-1 bg-gray-200 rounded-full text-xs font-medium text-gray-700">
+                      בארכיון
+                    </span>
+                  )}
+                </div>
+                
+                {/* Date and Time */}
+                <div className="flex items-start mb-3">
+                  <Calendar size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
+                  <div>
+                    <p className="text-sm text-gray-700">
+                      {selectedEvent.start_date ? formatDate(selectedEvent.start_date) : ''}
+                      {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.start_date && 
+                        ` - ${formatDate(selectedEvent.end_date)}`}
+                    </p>
+                    {selectedEvent.event_type === 'time_specific' && selectedEvent.start_time && (
+                      <div className="flex items-center mt-1">
+                        <Clock size={14} className="text-gray-500 ml-1 shrink-0" />
+                        <p className="text-sm text-gray-700">
+                          {selectedEvent.start_time}
+                          {selectedEvent.end_time && ` - ${selectedEvent.end_time}`}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Details */}
+                {selectedEvent?.details && (
+                  <div className="flex items-start mb-3">
+                    <FileText size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
+                    <div>
+                      <h3 className="text-xs font-medium text-gray-700">פרטים</h3>
+                      <p className="text-sm text-gray-700 whitespace-pre-line">{selectedEvent.details}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Notes */}
+                {selectedEvent?.notes && (
+                  <div className="flex items-start mb-3">
+                    <Bookmark size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
+                    <div>
+                      <h3 className="text-xs font-medium text-gray-700">הערות</h3>
+                      <p className="text-sm text-gray-700 whitespace-pre-line">{selectedEvent.notes}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-2 mt-4">
+                  {selectedEvent.status === 'active' && (
+                    <button
+                      onClick={handleArchiveEvent}
+                      className="flex items-center px-2 py-1 border border-gray-300 rounded-md text-xs text-gray-700 hover:bg-gray-50"
+                    >
+                      <Archive size={14} className="ml-1" />
+                      ארכיון
+                    </button>
+                  )}
+                  <button
+                    onClick={handleDeleteEvent}
+                    className="flex items-center px-2 py-1 border border-red-300 rounded-md text-xs text-red-700 hover:bg-red-50"
+                  >
+                    <Trash size={14} className="ml-1" />
+                    מחק
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowEventPopup(false);
+                      handleEditEvent();
+                    }}
+                    className="flex items-center px-2 py-1 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700"
+                  >
+                    <Edit size={14} className="ml-1" />
+                    ערוך
+                  </button>
+                </div>
+              </>
+            )
           )}
-          
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-2 mt-4">
-            {selectedEvent.status === 'active' && (
-              <button
-                onClick={handleArchiveEvent}
-                className="flex items-center px-2 py-1 border border-gray-300 rounded-md text-xs text-gray-700 hover:bg-gray-50"
-              >
-                <Archive size={14} className="ml-1" />
-                ארכיון
-              </button>
-            )}
-            <button
-              onClick={handleDeleteEvent}
-              className="flex items-center px-2 py-1 border border-red-300 rounded-md text-xs text-red-700 hover:bg-red-50"
-            >
-              <Trash size={14} className="ml-1" />
-              מחק
-            </button>
-            <button
-              onClick={() => {
-                setShowEventPopup(false);
-                handleEditEvent();
-              }}
-              className="flex items-center px-2 py-1 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700"
-            >
-              <Edit size={14} className="ml-1" />
-              ערוך
-            </button>
-          </div>
         </div>
-        
-        <div 
-          className="fixed inset-0 z-50 bg-black bg-opacity-10"
-          onClick={() => setShowEventPopup(false)}
-          style={{ display: showEventPopup ? 'block' : 'none' }}
-        />
       </>
     );
   };
@@ -524,7 +576,18 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     }
 
     try {
-      const event = {
+      const event: {
+        title: string;
+        details: string | null;
+        notes: string | null;
+        event_type: 'time_specific';
+        start_date: string;
+        end_date: string;
+        start_time: string;
+        end_time: string;
+        color: string;
+        status: 'active';
+      } = {
         title,
         details: null,
         notes: null,

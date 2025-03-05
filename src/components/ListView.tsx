@@ -220,8 +220,30 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
       return 'יום זיכרון';
     }
     
-    // אם זה אירוע רגיל, הצג את הזמן
-    return event.start_time ? `${event.start_time}${event.end_time ? ` - ${event.end_time}` : ''}` : '';
+    // אם זה אירוע מתמשך, הצג "מתמשך"
+    if (event.event_type === 'continuous') {
+      return 'מתמשך';
+    }
+    
+    // אם זה אירוע יום מלא, הצג "יום מלא"
+    if (event.event_type === 'full_day') {
+      return 'יום מלא';
+    }
+    
+    // אם יש שעת התחלה, הצג אותה
+    if (event.start_time) {
+      return `${event.start_time}${event.end_time ? ` - ${event.end_time}` : ''}`;
+    }
+    
+    // אם אין שעת התחלה אבל יש שעה באובייקט start, הצג אותה
+    if (event.start && event.start.getHours() !== 0) {
+      const startTime = moment(event.start).format('HH:mm');
+      const endTime = event.end ? moment(event.end).format('HH:mm') : '';
+      return `${startTime}${endTime ? ` - ${endTime}` : ''}`;
+    }
+    
+    // אחרת, אל תציג שעה
+    return '';
   };
   
   // פונקציה לטיפול בלחיצה על אירוע
