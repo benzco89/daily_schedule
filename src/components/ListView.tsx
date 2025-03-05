@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import moment from 'moment-timezone';
+import moment from 'moment';
+// ייבוא לוקאל עברית כבר קיים בקובץ הראשי
 import { CalendarEvent } from '../types/event';
 import { useEventStore } from '../store/eventStore';
 import { getAllHolidays } from '../utils/israeliHolidays';
 import { Star } from 'lucide-react';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 // CSS styles for holiday events in the list
 const holidayListStyles = `
@@ -45,11 +47,14 @@ interface ListViewProps {
 }
 
 const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
+  // הגדרת השפה העברית כבר קיימת בקובץ הראשי
+  
   const { calendarEvents, selectedDate, showHolidays } = useEventStore();
   const [filteredEvents, setFilteredEvents] = useState<CalendarEvent[]>([]);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<'day' | 'week'>('week');
   const israeliHolidays = getAllHolidays();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   
   useEffect(() => {
     // Get start of current week (Sunday)
@@ -146,8 +151,13 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
   
   // Generate array of days for the current week
   const daysInWeek = Array.from({ length: 7 }, (_, i) => {
-    return moment(selectedDate).startOf('week').add(i, 'days');
+    // הגדרת השפה העברית לכל אובייקט יום
+    return moment(selectedDate).startOf('week').add(i, 'days').locale('he');
   });
+  
+  // מערך שמות הימים בעברית
+  const hebrewDayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+  const hebrewDayNamesShort = ['א\'', 'ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'ש\''];
   
   // Group events by day for week view
   const eventsByDay = daysInWeek.reduce((acc, day) => {
@@ -288,29 +298,36 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
         >
           כל השבוע
         </button>
-        {daysInWeek.map(day => (
-          <button
-            key={day.format('YYYY-MM-DD')}
-            onClick={() => handleDayClick(day)}
-            className={`px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap
-              ${viewMode === 'day' && selectedDay && moment(selectedDay).isSame(day, 'day')
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-          >
-            {day.format('dddd')} {day.format('D/M')}
-          </button>
-        ))}
+        {daysInWeek.map((day, index) => {
+          // שימוש בשמות הימים בעברית
+          const dayName = hebrewDayNames[day.day()];
+          const shortDayName = hebrewDayNamesShort[day.day()];
+          const dayNumber = day.format('D/M');
+          
+          return (
+            <button
+              key={day.format('YYYY-MM-DD')}
+              onClick={() => handleDayClick(day)}
+              className={`px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap
+                ${viewMode === 'day' && selectedDay && moment(selectedDay).isSame(day, 'day')
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              {isMobile ? shortDayName : dayName} {dayNumber}
+            </button>
+          );
+        })}
       </div>
       
       {/* Events list */}
       <div className="bg-white rounded-lg shadow-sm border p-4 min-h-[calc(100vh-12rem)]">
         {viewMode === 'day' ? (
           // Day view - simple list of events
-          <div className="space-y-2">
+          <div className="space-y-4">
             {selectedDay && (
-              <h2 className="text-lg font-bold mb-3 pb-2 border-b">
-                {moment(selectedDay).format('dddd')}, {moment(selectedDay).format('D/M/YYYY')}
-                {viewMode === 'day' && (
+              <h2 className="text-lg font-bold mb-4 pb-2 border-b text-right">
+                {hebrewDayNames[moment(selectedDay).day()]}, {moment(selectedDay).format('D/M/YYYY')}
+                {!isMobile && viewMode === 'day' && (
                   <span className="text-sm font-normal text-gray-500 mr-2">
                     (מציג גם אירועים מתמשכים וחגים מהשבוע)
                   </span>
@@ -319,7 +336,7 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
             )}
             
             {filteredEvents.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">
+              <div className="text-center text-gray-500 py-10">
                 אין אירועים ביום זה
               </div>
             ) : (
@@ -335,17 +352,17 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
                                     event.event_type === 'continuous' ? '#FEF2F2' : `${event.color}10`,
                   }}
                 >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-lg font-bold mb-1">{event.title}</h3>
+                  <div className={`flex ${isMobile ? 'flex-col' : 'justify-between'} items-start text-right`}>
+                    <div className={isMobile ? 'w-full' : 'flex-1'}>
+                      <h3 className="text-lg font-bold mb-2">{event.title}</h3>
                       <p className="text-sm text-gray-600">
                         {formatEventTime(event)}
                       </p>
-                      {event.details && (
-                        <p className="text-sm text-gray-600 mt-2">{event.details}</p>
+                      {event.details && !isMobile && (
+                        <p className="text-sm text-gray-600 mt-3">{event.details}</p>
                       )}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className={`text-sm text-gray-500 ${isMobile ? 'mt-3 w-full text-right' : 'mr-4'}`}>
                       {moment(event.start).format('D/M/YYYY')}
                     </div>
                   </div>
@@ -355,28 +372,28 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
           </div>
         ) : (
           // Week view - events grouped by day
-          <div className="space-y-6">
+          <div className="space-y-8">
             {daysInWeek.map(day => {
               const dayKey = day.format('YYYY-MM-DD');
               const dayEvents = eventsByDay[dayKey] || [];
               
               return (
-                <div key={dayKey} className="border-b pb-4 last:border-b-0">
-                  <h2 className="text-lg font-bold mb-3 pb-2 border-b">
-                    {day.format('dddd')}, {day.format('D/M/YYYY')}
+                <div key={dayKey} className="border-b pb-6 last:border-b-0">
+                  <h2 className="text-lg font-bold mb-4 pb-2 border-b text-right">
+                    {hebrewDayNames[day.day()]}, {day.format('D/M/YYYY')}
                   </h2>
                   
                   {dayEvents.length === 0 ? (
-                    <div className="text-center text-gray-500 py-2">
+                    <div className="text-center text-gray-500 py-4">
                       אין אירועים ביום זה
-                </div>
+                    </div>
                   ) : (
-                <div className="space-y-2">
+                    <div className="space-y-3">
                       {dayEvents.map((event, idx) => (
                         <div 
                           key={`${event.id}-${idx}`}
                           onClick={() => handleEventClick(event)}
-                          className={`p-3 rounded-lg border cursor-pointer hover:shadow-md transition-shadow ${
+                          className={`p-4 rounded-lg border cursor-pointer hover:shadow-md transition-shadow ${
                             event.extendedProps?.type === 'holiday' ? 'holiday-event' : ''
                           }`}
                           style={{ 
@@ -384,27 +401,20 @@ const ListView: React.FC<ListViewProps> = ({ onEventSelect }) => {
                                         event.event_type === 'continuous' ? '#EF4444' : event.color,
                             backgroundColor: event.extendedProps?.type === 'holiday' ? '#FEF3C7' : 
                                             event.event_type === 'continuous' ? '#FEF2F2' : `${event.color}10`,
-                            borderWidth: event.extendedProps?.type === 'holiday' ? '2px' : '1px',
                           }}
                         >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="text-base font-bold flex items-center">
-                                {event.extendedProps?.type === 'holiday' && (
-                                  <Star size={16} className="text-amber-500 ml-1 inline-block" />
-                                )}
-                                <span className={event.extendedProps?.type === 'holiday' ? 'text-black' : ''}>
-                                  {event.title}
-                                </span>
-                              </h3>
-                              <p className={`text-sm ${event.extendedProps?.type === 'holiday' ? 'text-black' : 'text-gray-600'}`}>
+                          <div className={`flex ${isMobile ? 'flex-col' : 'justify-between'} items-start text-right`}>
+                            <div className={isMobile ? 'w-full' : 'flex-1'}>
+                              <h3 className="text-lg font-bold mb-2">{event.title}</h3>
+                              <p className="text-sm text-gray-600">
                                 {formatEventTime(event)}
                               </p>
-                          {event.details && (
-                                <p className={`text-sm ${event.extendedProps?.type === 'holiday' ? 'text-black' : 'text-gray-600'} mt-1 line-clamp-2`}>
-                              {event.details}
-                            </p>
-                          )}
+                              {event.details && !isMobile && (
+                                <p className="text-sm text-gray-600 mt-3">{event.details}</p>
+                              )}
+                            </div>
+                            <div className={`text-sm text-gray-500 ${isMobile ? 'mt-3 w-full text-right' : 'mr-4'}`}>
+                              {moment(event.start).format('D/M/YYYY')}
                             </div>
                           </div>
                         </div>

@@ -214,27 +214,40 @@
 
 /* Mobile optimizations */
 @media (max-width: 768px) {
-  .fc .fc-toolbar {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .fc .fc-toolbar-title {
+  .fc-toolbar-title {
     font-size: 1.2rem !important;
   }
   
-  .fc .fc-button {
-    padding: 0.3rem 0.6rem !important;
-    font-size: 0.8rem !important;
+  .fc-daygrid-day-number,
+  .fc-col-header-cell-cushion {
+    font-size: 0.9rem !important;
   }
   
   .fc-event {
     font-size: 0.8rem !important;
   }
   
-  /* Ensure calendar fills available height */
-  .fc-view-harness {
-    min-height: calc(100vh - 14rem) !important;
+  .fc-timegrid-slot-label-cushion,
+  .fc-timegrid-axis-cushion {
+    font-size: 0.8rem !important;
+  }
+  
+  .fc-button {
+    font-size: 0.8rem !important;
+    padding: 0.3rem 0.5rem !important;
+  }
+  
+  /* Increase touch targets */
+  .fc-daygrid-day,
+  .fc-timegrid-slot,
+  .fc-timegrid-slot-lane {
+    min-height: 2.5rem !important;
+  }
+  
+  /* Make sure the calendar fits on mobile screens */
+  .calendar-container {
+    height: calc(100vh - 120px) !important;
+    overflow: hidden;
   }
 }
 

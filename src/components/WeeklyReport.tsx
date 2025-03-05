@@ -12,8 +12,7 @@ interface WeeklyReportProps {
 }
 
 const WeeklyReport: React.FC<WeeklyReportProps> = ({ events, selectedDate, onClose }) => {
-  // הגדרת תחילת השבוע - יום ראשון
-  moment.locale('he', { week: { dow: 0 } }); // 0 = יום ראשון
+  // הגדרת תחילת השבוע כבר קיימת בקובץ הראשי
   const [currentWeekStart, setCurrentWeekStart] = useState(moment(selectedDate).startOf('week'));
   const daysInWeek = Array.from({ length: 7 }, (_, i) => moment(currentWeekStart).add(i, 'days'));
   const israeliHolidays = getAllHolidays();

@@ -223,20 +223,35 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       const windowWidth = window.innerWidth;
       const windowHeight = window.innerHeight;
       
-      // מיקום הפופאפ במרכז האזור שנבחר
-      const popupPosition = {
-        top: windowHeight / 3,
-        left: windowWidth / 2 - 175, // Half of popup width (350px)
-        width: 350,
-        height: 50
-      };
-      
-      setEventPopupPosition(popupPosition);
+      // במובייל, נציג את הפופאפ במרכז המסך
+      if (isMobile) {
+        const popupPosition = {
+          top: windowHeight / 3,
+          left: windowWidth / 2 - Math.min(175, windowWidth / 2 - 20), // מרכז המסך, עם שוליים
+          width: Math.min(350, windowWidth - 40), // מקסימום 350px או רוחב המסך פחות שוליים
+          height: 50
+        };
+        
+        setEventPopupPosition(popupPosition);
+      } else {
+        // במחשב, נציג את הפופאפ במרכז האזור שנבחר
+        const popupPosition = {
+          top: windowHeight / 3,
+          left: windowWidth / 2 - 175, // Half of popup width (350px)
+          width: 350,
+          height: 50
+        };
+        
+        setEventPopupPosition(popupPosition);
+      }
     }
 
     // הצגת הפופאפ
     setShowEventPopup(true);
     setIsNewEventPopup(true); // סימון שזה פופאפ ליצירת אירוע חדש
+    
+    // הוספת לוג לצורך דיבוג במובייל
+    console.log('Popup should be shown now. isMobile:', isMobile, 'showEventPopup:', showEventPopup);
   };
 
   const renderEventContent = (eventInfo: { event: any; timeText: string; view?: { type: string } }) => {
@@ -344,34 +359,43 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       position: 'fixed',
       zIndex: 1000,
       width: Math.min(350, windowWidth - 40),
-      maxHeight: '350px',
+      maxHeight: isMobile ? '80vh' : '350px',
       backgroundColor: 'white',
       borderRadius: '8px',
       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
       border: isNewEventPopup ? '2px solid #3B82F6' : `2px solid ${selectedEvent?.color || '#3B82F6'}`,
-      padding: '16px',
+      padding: isMobile ? '12px' : '16px',
       overflow: 'auto'
     };
     
-    // Position above or below the event
-    if (showBelow) {
-      popupStyle.top = `${eventPopupPosition.top + eventPopupPosition.height + 8}px`;
+    // במובייל, נציג את הפופאפ במרכז המסך
+    if (isMobile) {
+      popupStyle.top = '50%';
+      popupStyle.left = '50%';
+      popupStyle.transform = 'translate(-50%, -50%)';
     } else {
-      popupStyle.bottom = `${windowHeight - eventPopupPosition.top + 8}px`;
+      // Position above or below the event
+      if (showBelow) {
+        popupStyle.top = `${eventPopupPosition.top + eventPopupPosition.height + 8}px`;
+      } else {
+        popupStyle.bottom = `${windowHeight - eventPopupPosition.top + 8}px`;
+      }
+      
+      // Center horizontally relative to the event
+      const eventCenter = eventPopupPosition.left + (eventPopupPosition.width / 2);
+      const popupWidth = Math.min(350, windowWidth - 40);
+      popupStyle.left = `${Math.max(20, Math.min(windowWidth - popupWidth - 20, eventCenter - (popupWidth / 2)))}px`;
     }
-    
-    // Center horizontally relative to the event
-    const eventCenter = eventPopupPosition.left + (eventPopupPosition.width / 2);
-    const popupWidth = Math.min(350, windowWidth - 40);
-    popupStyle.left = `${Math.max(20, Math.min(windowWidth - popupWidth - 20, eventCenter - (popupWidth / 2)))}px`;
     
     // Ensure the popup is visible within the viewport
-    if (parseFloat(popupStyle.top as string) < 10) {
-      popupStyle.top = '10px';
-    }
-    
-    if (parseFloat(popupStyle.left as string) < 10) {
-      popupStyle.left = '10px';
+    if (!isMobile) {
+      if (parseFloat(popupStyle.top as string) < 10) {
+        popupStyle.top = '10px';
+      }
+      
+      if (parseFloat(popupStyle.left as string) < 10) {
+        popupStyle.left = '10px';
+      }
     }
     
     return (
@@ -394,7 +418,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             // תצוגת פופאפ ליצירת אירוע חדש
             <>
               <div className="flex justify-between items-start mb-3">
-                <h3 className="text-lg font-semibold">יצירת אירוע חדש</h3>
+                <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>יצירת אירוע חדש</h3>
                 <button 
                   onClick={() => {
                     setShowEventPopup(false);
@@ -403,21 +427,21 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                   }}
                   className="text-gray-500 hover:text-gray-700"
                 >
-                  <X size={20} />
+                  <X size={isMobile ? 18 : 20} />
                 </button>
               </div>
               
               {/* Date and Time */}
               <div className="flex items-start mb-3">
-                <Calendar size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
+                <Calendar size={isMobile ? 14 : 16} className="text-gray-500 ml-2 mt-1 shrink-0" />
                 <div>
-                  <p className="text-sm text-gray-700">
+                  <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-700`}>
                     {selectedTimeSlot ? formatDate(selectedTimeSlot.start) : ''}
                   </p>
                   {selectedTimeSlot && (
                     <div className="flex items-center mt-1">
-                      <Clock size={14} className="text-gray-500 ml-1 shrink-0" />
-                      <p className="text-sm text-gray-700">
+                      <Clock size={isMobile ? 12 : 14} className="text-gray-500 ml-1 shrink-0" />
+                      <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-700`}>
                         {moment(selectedTimeSlot.start).format('HH:mm')}
                         {' - '}
                         {moment(selectedTimeSlot.end).format('HH:mm')}
@@ -438,9 +462,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                       setSelectedTimeSlot(null);
                     }
                   }}
-                  className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                  className={`flex items-center ${isMobile ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'} bg-blue-600 text-white rounded-md hover:bg-blue-700`}
                 >
-                  <Plus size={16} className="ml-1" />
+                  <Plus size={isMobile ? 14 : 16} className="ml-1" />
                   צור אירוע חדש
                 </button>
               </div>
@@ -450,19 +474,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             selectedEvent && (
               <>
                 <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-lg font-semibold">{selectedEvent.title}</h3>
+                  <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>{selectedEvent.title}</h3>
                   <button 
                     onClick={() => setShowEventPopup(false)}
                     className="text-gray-500 hover:text-gray-700"
                   >
-                    <X size={20} />
+                    <X size={isMobile ? 18 : 20} />
                   </button>
                 </div>
                 
                 {/* Event Type Badge */}
                 <div className="flex items-center mb-3">
                   <span 
-                    className="px-2 py-1 rounded-full text-xs font-medium"
+                    className={`px-2 py-1 rounded-full ${isMobile ? 'text-[10px]' : 'text-xs'} font-medium`}
                     style={{ 
                       backgroundColor: selectedEvent.event_type === 'continuous' ? '#EF4444' : selectedEvent.color,
                       color: ['#FFFFFF', '#FFFF00'].includes(selectedEvent.color) ? '#000000' : '#FFFFFF'
@@ -474,7 +498,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                   </span>
                   
                   {selectedEvent.status === 'archived' && (
-                    <span className="mr-2 px-2 py-1 bg-gray-200 rounded-full text-xs font-medium text-gray-700">
+                    <span className={`mr-2 px-2 py-1 bg-gray-200 rounded-full ${isMobile ? 'text-[10px]' : 'text-xs'} font-medium text-gray-700`}>
                       בארכיון
                     </span>
                   )}
@@ -482,17 +506,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                 
                 {/* Date and Time */}
                 <div className="flex items-start mb-3">
-                  <Calendar size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
+                  <Calendar size={isMobile ? 14 : 16} className="text-gray-500 ml-2 mt-1 shrink-0" />
                   <div>
-                    <p className="text-sm text-gray-700">
+                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-700`}>
                       {selectedEvent.start_date ? formatDate(selectedEvent.start_date) : ''}
                       {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.start_date && 
                         ` - ${formatDate(selectedEvent.end_date)}`}
                     </p>
                     {selectedEvent.event_type === 'time_specific' && selectedEvent.start_time && (
                       <div className="flex items-center mt-1">
-                        <Clock size={14} className="text-gray-500 ml-1 shrink-0" />
-                        <p className="text-sm text-gray-700">
+                        <Clock size={isMobile ? 12 : 14} className="text-gray-500 ml-1 shrink-0" />
+                        <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-700`}>
                           {selectedEvent.start_time}
                           {selectedEvent.end_time && ` - ${selectedEvent.end_time}`}
                         </p>
@@ -504,10 +528,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                 {/* Details */}
                 {selectedEvent?.details && (
                   <div className="flex items-start mb-3">
-                    <FileText size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
+                    <FileText size={isMobile ? 14 : 16} className="text-gray-500 ml-2 mt-1 shrink-0" />
                     <div>
-                      <h3 className="text-xs font-medium text-gray-700">פרטים</h3>
-                      <p className="text-sm text-gray-700 whitespace-pre-line">{selectedEvent.details}</p>
+                      <h3 className={`${isMobile ? 'text-[10px]' : 'text-xs'} font-medium text-gray-700`}>פרטים</h3>
+                      <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-700 whitespace-pre-line`}>{selectedEvent.details}</p>
                     </div>
                   </div>
                 )}
@@ -515,10 +539,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                 {/* Notes */}
                 {selectedEvent?.notes && (
                   <div className="flex items-start mb-3">
-                    <Bookmark size={16} className="text-gray-500 ml-2 mt-1 shrink-0" />
+                    <Bookmark size={isMobile ? 14 : 16} className="text-gray-500 ml-2 mt-1 shrink-0" />
                     <div>
-                      <h3 className="text-xs font-medium text-gray-700">הערות</h3>
-                      <p className="text-sm text-gray-700 whitespace-pre-line">{selectedEvent.notes}</p>
+                      <h3 className={`${isMobile ? 'text-[10px]' : 'text-xs'} font-medium text-gray-700`}>הערות</h3>
+                      <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-700 whitespace-pre-line`}>{selectedEvent.notes}</p>
                     </div>
                   </div>
                 )}
@@ -528,17 +552,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                   {selectedEvent.status === 'active' && (
                     <button
                       onClick={handleArchiveEvent}
-                      className="flex items-center px-2 py-1 border border-gray-300 rounded-md text-xs text-gray-700 hover:bg-gray-50"
+                      className={`flex items-center ${isMobile ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'} border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50`}
                     >
-                      <Archive size={14} className="ml-1" />
+                      <Archive size={isMobile ? 12 : 14} className="ml-1" />
                       ארכיון
                     </button>
                   )}
                   <button
                     onClick={handleDeleteEvent}
-                    className="flex items-center px-2 py-1 border border-red-300 rounded-md text-xs text-red-700 hover:bg-red-50"
+                    className={`flex items-center ${isMobile ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'} border border-red-300 rounded-md text-red-700 hover:bg-red-50`}
                   >
-                    <Trash size={14} className="ml-1" />
+                    <Trash size={isMobile ? 12 : 14} className="ml-1" />
                     מחק
                   </button>
                   <button
@@ -546,9 +570,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                       setShowEventPopup(false);
                       handleEditEvent();
                     }}
-                    className="flex items-center px-2 py-1 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700"
+                    className={`flex items-center ${isMobile ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'} bg-blue-600 text-white rounded-md hover:bg-blue-700`}
                   >
-                    <Edit size={14} className="ml-1" />
+                    <Edit size={isMobile ? 12 : 14} className="ml-1" />
                     ערוך
                   </button>
                 </div>
@@ -634,6 +658,87 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     // המשך הקוד כרגיל
     return `${startTime} - ${endTime}`;
   };
+
+  // הוספת אפקט שיוסיף מאזיני אירועים לתאים בלוח השנה במובייל
+  useEffect(() => {
+    if (isMobile && calendarRef.current) {
+      const addMobileTapListeners = () => {
+        // מצא את כל התאים בלוח השנה
+        const dayCells = document.querySelectorAll('.fc-daygrid-day, .fc-timegrid-slot');
+        
+        // הוסף מאזין לחיצה לכל תא
+        dayCells.forEach(cell => {
+          const clickHandler = (e: Event) => {
+            // בדוק אם הלחיצה היא על התא עצמו ולא על אירוע
+            if ((e.target as HTMLElement).closest('.fc-event') === null) {
+              console.log('Cell clicked in mobile view');
+              
+              // קבל את התאריך והשעה מהתא
+              const date = new Date();
+              const dataDate = (cell as HTMLElement).getAttribute('data-date');
+              
+              if (dataDate) {
+                const cellDate = new Date(dataDate);
+                
+                // קבע את השעה לפי התא, אם זה תא של שעה
+                if ((cell as HTMLElement).classList.contains('fc-timegrid-slot')) {
+                  const timeAttr = (cell as HTMLElement).getAttribute('data-time');
+                  if (timeAttr) {
+                    const [hours, minutes] = timeAttr.split(':').map(Number);
+                    cellDate.setHours(hours, minutes);
+                  }
+                }
+                
+                // צור אובייקט בחירה
+                const endDate = new Date(cellDate);
+                endDate.setHours(endDate.getHours() + 1);
+                
+                const selectInfo = {
+                  start: cellDate,
+                  end: endDate,
+                  allDay: !(cell as HTMLElement).classList.contains('fc-timegrid-slot'),
+                  view: calendarRef.current?.getApi().view
+                };
+                
+                // הפעל את פונקציית הבחירה
+                handleDateSelect(selectInfo as DateSelectArg);
+              }
+            }
+          };
+          
+          cell.addEventListener('click', clickHandler);
+          
+          // שמור את ה-handler כדי שנוכל להסיר אותו אחר כך
+          (cell as any)._mobileClickHandler = clickHandler;
+        });
+      };
+      
+      // הוסף את המאזינים לאחר שהלוח נטען
+      setTimeout(addMobileTapListeners, 1000);
+      
+      // הוסף את המאזינים גם כאשר משנים תצוגה
+      const api = calendarRef.current.getApi();
+      const datesSetHandler = () => {
+        setTimeout(addMobileTapListeners, 500);
+      };
+      
+      // שימוש באירוע datesSet במקום viewDidMount
+      api.on('datesSet', datesSetHandler);
+      
+      return () => {
+        // נקה את המאזינים בעת פירוק הקומפוננטה
+        const dayCells = document.querySelectorAll('.fc-daygrid-day, .fc-timegrid-slot');
+        dayCells.forEach(cell => {
+          if ((cell as any)._mobileClickHandler) {
+            cell.removeEventListener('click', (cell as any)._mobileClickHandler);
+          }
+        });
+        
+        // נקה גם את מאזין datesSet
+        api.off('datesSet', datesSetHandler);
+      };
+    }
+  }, [isMobile, handleDateSelect]);
 
   return (
     <div className="h-full flex flex-col">
@@ -812,6 +917,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView={view}
             events={allEvents}
+            firstDay={0}
             eventClick={(info) => {
               // רק אירועים רגילים, לא חגים
               if (info.event.extendedProps.type !== 'holiday' && info.event.extendedProps.type !== 'memorial') {
@@ -819,8 +925,27 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               }
             }}
             select={handleDateSelect}
+            dateClick={(info) => {
+              // במובייל, לחיצה על תאריך תפעיל את אותה פונקציה כמו בחירת טווח תאריכים
+              if (isMobile) {
+                const endDate = new Date(info.date);
+                endDate.setHours(endDate.getHours() + 1); // הוסף שעה אחת לתאריך הסיום
+                
+                const selectInfo = {
+                  start: info.date,
+                  end: endDate,
+                  allDay: info.allDay,
+                  view: info.view
+                };
+                
+                handleDateSelect(selectInfo as DateSelectArg);
+              }
+            }}
             selectable={true}
             selectMirror={true}
+            longPressDelay={isMobile ? 100 : 1000} // קיצור זמן הלחיצה הארוכה במובייל
+            selectLongPressDelay={isMobile ? 100 : 1000} // קיצור זמן הלחיצה הארוכה לבחירה במובייל
+            selectMinDistance={isMobile ? 0 : 5} // מרחק מינימלי לבחירה במובייל
             dayMaxEvents={false}
             weekends={true}
             slotMinTime="00:00:00"
@@ -828,6 +953,25 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             allDaySlot={true}
             allDayText="כל היום"
             eventMinHeight={25}
+            height={isMobile ? "auto" : "100%"}
+            contentHeight={isMobile ? "auto" : "auto"}
+            aspectRatio={isMobile ? 0.8 : 1.35}
+            handleWindowResize={true}
+            stickyHeaderDates={true}
+            nowIndicator={true}
+            views={{
+              dayGridMonth: {
+                dayMaxEventRows: 4,
+                moreLinkText: 'עוד',
+                moreLinkClick: 'day'
+              },
+              timeGridWeek: {
+                dayHeaderFormat: { weekday: 'short', day: 'numeric', month: 'numeric' }
+              },
+              timeGridDay: {
+                dayHeaderFormat: { weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' }
+              }
+            }}
             eventContent={(eventInfo) => {
               // For holidays, use a special rendering
               if (eventInfo.event.extendedProps.type === 'holiday' || eventInfo.event.extendedProps.type === 'memorial') {
@@ -900,7 +1044,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               center: 'title',
               end: ''
             }}
-            height="100%"
             direction="rtl"
             locale={heLocale}
             eventTimeFormat={{
@@ -921,21 +1064,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             }}
             slotEventOverlap={false}
             expandRows={true}
-            stickyHeaderDates={true}
             nowIndicator={true}
-            views={{
-              dayGridMonth: {
-                dayMaxEventRows: 4,
-                moreLinkText: 'עוד',
-                moreLinkClick: 'day'
-              },
-              timeGridWeek: {
-                dayHeaderFormat: { weekday: 'short', day: 'numeric', month: 'numeric' }
-              },
-              timeGridDay: {
-                dayHeaderFormat: { weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' }
-              }
-            }}
           />
         </div>
       )}
