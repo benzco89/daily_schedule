@@ -1,7 +1,15 @@
 /* Calendar Container */
 .fc {
-  height: 100%;
+  height: 100% !important;
+  min-height: 600px !important;
   direction: rtl;
+  width: 100%;
+  max-width: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
 /* Event Styles */
@@ -13,6 +21,13 @@
   font-size: 0.875rem !important;
   margin: 1px 0 !important;
   cursor: pointer !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  transition: transform 0.1s ease-in-out !important;
+}
+
+.fc-event:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15) !important;
 }
 
 .fc-event-title {
@@ -108,31 +123,60 @@
   padding: 2px 4px !important;
 }
 
-/* Header Toolbar */
-.fc-header-toolbar {
-  margin-bottom: 1rem !important;
-  padding: 0 1rem;
+/* שיפור תצוגת השעות בצד */
+.fc-timegrid-axis {
+  background-color: #f8fafc !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+  width: 60px !important;
+  padding: 0 8px !important;
 }
 
-.fc-toolbar-title {
-  font-size: 1.25rem !important;
-  font-weight: bold;
+/* שיפור תצוגת הכותרות של הימים */
+.fc-col-header-cell-cushion {
+  padding: 8px 4px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
 }
 
-/* Today Highlight */
-.fc-day-today {
-  background-color: rgba(59, 130, 246, 0.05) !important;
+/* שיפור תצוגת היום הנוכחי */
+.fc-day-today .fc-col-header-cell-cushion {
+  color: #2563eb !important;
+  font-weight: 700 !important;
 }
 
-/* Now Indicator */
+/* שיפור תצוגת הקו המציין את השעה הנוכחית */
 .fc-timegrid-now-indicator-line {
-  border-color: #ef4444;
+  border-color: #ef4444 !important;
+  border-width: 2px !important;
   z-index: 4;
 }
 
 .fc-timegrid-now-indicator-arrow {
-  border-color: #ef4444;
+  border-color: #ef4444 !important;
   margin-left: -6px;
+}
+
+/* Header Toolbar */
+.fc-header-toolbar {
+  margin-bottom: 1rem !important;
+  padding: 0 1rem;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fc-toolbar-title {
+  font-size: 1.5rem !important;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+/* Today Highlight */
+.fc-day-today {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
 }
 
 /* RTL Fixes */
@@ -198,29 +242,50 @@
 .calendar-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 100% !important;
+  min-height: 600px !important;
+  width: 100%;
+  max-width: 100%;
+  background-color: white !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* Make sure the calendar fills the available space */
 .calendar-container .fc {
-  height: 100%;
+  height: 100% !important;
+  min-height: 600px !important;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  background-color: white !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .calendar-container .fc-view-harness {
   flex-grow: 1;
+  width: 100%;
+  max-width: 100%;
+  background-color: white !important;
+  min-height: 600px !important;
 }
 
 /* Time Grid Container */
 .fc-timegrid-container {
   height: auto !important;
-  min-height: 800px !important;
+  min-height: 600px !important;
+  width: 100%;
 }
 
 .fc-timegrid-body {
   height: auto !important;
-  min-height: 800px !important;
+  min-height: 600px !important;
+  width: 100%;
 }
 
 /* Event Content */
@@ -381,37 +446,105 @@
   background-color: transparent;
 }
 
-/* Make sure the calendar container fills the available height */
-.calendar-container {
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 4rem);
-}
-
-/* Ensure the calendar view fills the available height */
-.fc-view-harness {
-  min-height: calc(100vh - 14rem) !important;
-}
-
-/* Ensure the list view fills the available height */
-.list-view-wrapper {
-  min-height: calc(100vh - 12rem);
-  display: flex;
-  flex-direction: column;
-}
-
-/* Make sure the list content fills the available space */
-.list-view-content {
-  flex: 1;
-  overflow-y: auto;
-}
-
-/* Ensure the white background extends to the bottom of the page */
-.list-view-background {
+/* Improve calendar view appearance */
+.fc-view {
   background-color: white;
-  min-height: calc(100vh - 12rem);
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  border: 1px solid #e5e7eb;
-  padding: 1rem;
+  border-radius: 0;
+  overflow: visible;
+  box-shadow: none;
+}
+
+/* שיפור מראה תצוגת החודש */
+.fc-daygrid-day-number {
+  font-weight: 500 !important;
+  color: #334155 !important;
+  padding: 8px !important;
+}
+
+.fc-daygrid-day-top {
+  justify-content: center !important;
+  padding-top: 4px !important;
+}
+
+.fc-daygrid-day-frame {
+  min-height: 100px !important;
+}
+
+/* הגדלת רוחב התאים בתצוגת השבוע */
+.fc-timeGridWeek-view .fc-col-header-cell,
+.fc-timeGridWeek-view .fc-timegrid-col {
+  width: 14.28% !important; /* 100% / 7 ימים */
+  max-width: none !important;
+}
+
+/* הגדלת רוחב התאים בתצוגת היום */
+.fc-timeGridDay-view .fc-col-header-cell,
+.fc-timeGridDay-view .fc-timegrid-col {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* הגדלת רוחב התאים בתצוגת החודש */
+.fc-dayGridMonth-view .fc-col-header-cell,
+.fc-dayGridMonth-view .fc-daygrid-day {
+  width: 14.28% !important; /* 100% / 7 ימים */
+  max-width: none !important;
+}
+
+/* שיפור מראה תצוגת היום */
+.fc-timeGridDay-view .fc-timegrid-slot {
+  height: 50px !important;
+}
+
+/* שיפור מראה תצוגת השבוע */
+.fc-timeGridWeek-view .fc-timegrid-slot {
+  height: 40px !important;
+}
+
+/* שיפור מראה הכפתורים בסרגל הכלים */
+.fc-button-primary {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+  font-weight: 500 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s ease !important;
+}
+
+.fc-button-primary:hover {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.fc-button-primary:not(:disabled):active,
+.fc-button-primary.fc-button-active {
+  background-color: #3b82f6 !important;
+  border-color: #2563eb !important;
+  color: white !important;
+}
+
+/* שיפור מראה תאי הימים */
+.fc-daygrid-day {
+  transition: background-color 0.15s ease !important;
+}
+
+.fc-daygrid-day:hover {
+  background-color: #f8fafc !important;
+}
+
+.fc-col-header-cell {
+  background-color: #f8fafc !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+  padding: 10px 0 !important;
+}
+
+/* Ensure the calendar takes full width on all screen sizes */
+@media (min-width: 1200px) {
+  .calendar-container, 
+  .calendar-container .fc,
+  .calendar-container .fc-view-harness {
+    width: 100%;
+    max-width: 100%;
+  }
 } 

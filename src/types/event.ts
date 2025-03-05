@@ -28,4 +28,12 @@ export interface CalendarEvent {
   details: string | null;
   notes: string | null;
   status: EventStatus;
+  start_date?: string;
+  end_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  extendedProps?: {
+    type?: string;
+    [key: string]: any;
+  };
 }
